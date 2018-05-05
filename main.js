@@ -3,6 +3,7 @@ var CryptoJS = require("crypto-js");
 var express = require("express");
 var bodyParser = require('body-parser');
 var WebSocket = require("ws");
+var request = require('request');
 
 var http_port = process.env.HTTP_PORT || 3001;
 var p2p_port = process.env.P2P_PORT || 6001;
@@ -26,7 +27,7 @@ var MessageType = {
 };
 
 var getGenesisBlock = () => {
-    return new Block(0, "0", 1465154705, "my genesis block!!", "816534932c2b7154836da6afc367695e6337db8a921823784c14378abed4f7d7");
+    return new Block(0, "0", 1465154705, "tiago!!", "816534932c2b7154836da6afc367695e6337db8a921823784c14378abed4f7d7");
 };
 
 var blockchain = [getGenesisBlock()];
@@ -62,6 +63,21 @@ var initP2PServer = () => {
 };
 
 var initConnection = (ws) => {
+    
+    for (var i = sockets.length - 1; i >= 0; i--) {
+        let site;
+        site = 'http://'+sockets[i]._socket.remoteAddress+":"+http_port+"/addPeer";
+        console.log(site);
+        console.log(ws._socket.remoteAddress);
+        request.post({
+            url: site, 
+            json: { peer: "http://"+ws._socket.remoteAddress },
+            function(error, response, body){
+                console.log(body);
+            }
+        });
+    }
+
     sockets.push(ws);
     initMessageHandler(ws);
     initErrorHandler(ws);
@@ -135,12 +151,21 @@ var isValidNewBlock = (newBlock, previousBlock) => {
 };
 
 var connectToPeers = (newPeers) => {
-    newPeers.forEach((peer) => {
-        var ws = new WebSocket(peer);
-        ws.on('open', () => initConnection(ws));
-        ws.on('error', () => {
-            console.log('connection failed')
-        });
+    newPeers.forEach((newPeer) => {
+        let count = 0;
+        for (var i = sockets.length - 1; i >= 0; i--) {
+            if("http://"+sockets[i]._socket.remoteAddress == newPeer){
+                count++;
+            }
+        }
+        if(count == 0){
+            var ws = new WebSocket(newPeer+":"+p2p_port);
+            ws.on('open', () => initConnection(ws));
+            ws.on('error', () => {
+               console.log('connection failed')
+            });    
+        }
+        
     });
 };
 
