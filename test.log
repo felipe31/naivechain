@@ -1,0 +1,7 @@
+[    37.062] 
+X.Org X Server 1.19.5
+Release Date: 2017-10-12
+[    37.062] X Protocol Version 11, Revision 0
+[    37.062] Build Operating System: Linux 4.4.0-101-generic x86_64 Ubuntu
+[    37.062] Current Operating System: Linux lucasfrancopc 4.13.0-41-generic #46~16.04.1-Ubuntu SMP Thu May 3 10:06:43 UTC 2018 x86_64
+[    37.062] Kernel command line: BOOT_IMAGE=/boot/vmlinuz-4.13.0-41-generic.efi.signed root=UUID=78d55fff-b5ca-4a76-b6dd-b7d42ac3f773 ro quiet splash vt.handoff=
