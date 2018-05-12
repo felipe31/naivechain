@@ -67,11 +67,22 @@ var initHttpServer = () => {
 var initP2PServer = () => {
     var server = new WebSocket.Server({port: p2p_port});
     server.on('connection', (ws) => {
-        
+        for (var i = sockets.length - 1; i >= 0; i--) {
+            if(sockets[i]._socket.remoteAddress == ws._socket.remoteAddress){
+                count++;
+            }
+        }
+
+        if(count == 0){
+            ws.on('open', () => initConnection(ws));
+            ws.on('error', () => {
+               console.log('connection failed')
+            });    
+        }
         //let a = "http://"+ws._socket.remoteAddress+":"+p2p_port;
         //console.log(a); 
         //var serv = new WebSocket("http://"+ws._socket.remoteAddress+":"+p2p_port);
-        initConnection(ws);
+        //initConnection(ws);
     });
 
      

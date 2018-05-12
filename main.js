@@ -229,19 +229,27 @@ var initP2PServer = () => {
 
 var initConnection = (ws) => {
     
+    let count = 0;
     for (var i = sockets.length - 1; i >= 0; i--) {
-        let site;
-        site = 'http://'+sockets[i]._socket.remoteAddress+":"+http_port+"/addPeer";
-        request.post({
-            url: site,
-            json: { peer: ws._socket.remoteAddress }
-        });
+        if(sockets[i]._socket.remoteAddress == ws._socket.remoteAddress){
+            count++;
+        }
     }
 
-    sockets.push(ws);
-    initMessageHandler(ws);
-    initErrorHandler(ws);
-    write(ws, queryChainLengthMsg());
+    if(count == 0){
+        for (var i = sockets.length - 1; i >= 0; i--) {
+            let site;
+            site = 'http://'+sockets[i]._socket.remoteAddress+":"+http_port+"/addPeer";
+            request.post({
+                url: site,
+                json: { peer: ws._socket.remoteAddress }
+            });
+        }
+        sockets.push(ws);
+        initMessageHandler(ws);
+        initErrorHandler(ws);
+        write(ws, queryChainLengthMsg());
+    }
 };
 
 var initMessageHandler = (ws) => {
@@ -281,22 +289,12 @@ var initErrorHandler = (ws) => {
 
 var connectToPeers = (newPeers) => {
     newPeers.forEach((newPeer) => {
-        let count = 0;
-
-        for (var i = sockets.length - 1; i >= 0; i--) {
-            if(sockets[i]._socket.remoteAddress == newPeer){
-                count++;
-            }
-        }
-
-        if(count == 0){
-            let serv = 'ws://'+newPeer+":"+p2p_port;
-            var ws = new WebSocket(serv);
-            ws.on('open', () => initConnection(ws));
-            ws.on('error', () => {
-               console.log('connection failed')
-            });    
-        }
+        let serv = 'ws://'+newPeer+":"+p2p_port;
+        var ws = new WebSocket(serv);
+        ws.on('open', () => initConnection(ws));
+        ws.on('error', () => {
+           console.log('connection failed')
+        });
     });
 };
 
