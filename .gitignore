@@ -2,7 +2,4 @@ node_modules
 npm-debug.log
 .idea
 
-data/data*
-
-
 .DS_Store
