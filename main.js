@@ -440,7 +440,7 @@ class Connection {
 					socket.disconnect();
 				}
 		});
-
+		let selfie = this;
 		io.on('connection', function(socket){
 			let peer = sockets.find(x => x.socket === socket.id);
 			if(peer.new == 1){
@@ -448,13 +448,13 @@ class Connection {
 				console.log("connected : "+socket.request.connection.remoteAddress);
 				io.to(socket.id).emit('responseConnection', symmetricEncripted);
 				// manda broadcast para os outros 
-				let data = {'type': 1, 'address': socket.request.connection.remoteAddress, 'publicKey': dataDecrypted.publicKey, 'symmetric': symmetric};
-				this.connectAddress(data);
-				this.broadcast(JSON.stringify(data));
+				let data = {'type': 1, 'address': socket.request.connection.remoteAddress, 'publicKey': peer.publicKey, 'symmetric': peer.symmetric};
+				selfie.connectAddress(data);
+				selfie.broadcast(JSON.stringify(data));
 			} else{
 				// otimizar, vascular os clientes pra verificar se ele ja nao foi adicionado 
-				let data = {'type': 1, 'address': socket.request.connection.remoteAddress, 'publicKey': dataDecrypted.publicKey, 'symmetric': symmetric};
-				this.connectAddress(data);
+				let data = {'type': 1, 'address': socket.request.connection.remoteAddress, 'publicKey': peer.publicKey, 'symmetric': peer.symmetric};
+				selfie.connectAddress(data);
 			}
 
 		});
@@ -473,13 +473,13 @@ class Connection {
 		if(address.type == 0){
 			let data = security.encryptSymmetric(JSON.stringify({publicKey: security.publicKey}), password);
 
-			client = ioClient.connect(address, {
+			client = ioClient.connect(address.address, {
 				query: {data: data}
 			});
 		} else {
 			let data = security.encryptSymmetric(JSON.stringify({publicKey: security.publicKey}), password);
 
-			client = ioClient.connect(address, {
+			client = ioClient.connect(address.address, {
 				query: {data: data}
 			});
 		}
