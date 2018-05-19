@@ -72,7 +72,7 @@ var http_port = 3001;
 var p2p_port = 6001;
 var initialPeers = [];
 
-var sockets = [];
+
 var MessageType = {
 	QUERY_LATEST: 0,
 	QUERY_ALL: 1,
@@ -400,13 +400,16 @@ class Blockchain {
 class Connection {
 
 	constructor() {
+		this.sockets = [];
+		this.clients = [];
+
 		io.use(function (socket, next) {
 			//console.log(socket.request.connection);
 			let data = socket.handshake.query.data;
 
 				try {
 					// VERIFICADOR
-					if(!sockets.find(x => x.address === socket.request.connection.remoteAddress)){
+					if(!this.sockets.find(x => x.address === socket.request.connection.remoteAddress)){
 
 						let dataDecrypted = security.decryptSymmetric(data);
 						
@@ -415,8 +418,8 @@ class Connection {
 						let publicKeyDecrypted = security.extractPublicKey(dataDecrypted.publicKey);
 						
 						if(publicKeyDecrypted != false){
-							if(!sockets.find(x => x.publicKey === publicKeyDecrypted)){
-								sockets.push({'socket':socket.id, 'address': socket.request.connection.remoteAddress, 'publicKey': dataDecrypted.publicKey});
+							if(!this.sockets.find(x => x.publicKey === publicKeyDecrypted)){
+								this.sockets.push({'socket':socket.id, 'address': socket.request.connection.remoteAddress, 'publicKey': dataDecrypted.publicKey});
 								next();
 							} else {
 								console.log("Peer try to connect, but we already have same public key");
@@ -441,7 +444,7 @@ class Connection {
 		});
 		let selfie = this;
 		io.on('connection', function(socket){
-			let peer = sockets.find(x => x.socket === socket.id);
+			let peer = this.sockets.find(x => x.socket === socket.id);
 			// let symmetricEncripted = security.encryptKeys(JSON.stringify({'symmetric': peer.symmetric}), peer.publicKey);
 			// console.log("connected : "+socket.request.connection.remoteAddress);
 			// io.to(socket.id).emit('responseConnection', symmetricEncripted);
@@ -459,81 +462,77 @@ class Connection {
 		http.listen(p2p_port, function(){
 			console.log('listening on *:' + p2p_port);
 		});
-
-		this.clients = [];
 	}
 
 	connectAddress(address){
 
-		let client;
-		let data = security.encryptSymmetric(JSON.stringify({publicKey: security.publicKey}));
+		if(!this.clients.find(x => x.address === address.address)) {
 
-		client = ioClient.connect('http://'+address.address+":"+p2p_port, {
-			query: {data: data}
-		});
-		
+			let client;
+			let data = security.encryptSymmetric(JSON.stringify({publicKey: security.publicKey}));
 
-		client.on("responseConnection", (result) => {
-			try {
-				let symmetric = JSON.parse(security.decryptKeys(result)).symmetric;
-				mySymmetric = symmetric;
-			} catch (err){
-				console.log("algo errado no retorno da simetrica");
-			}
-		});
+			client = ioClient.connect('http://'+address.address+":"+p2p_port, {
+				query: {data: data}
+			});
+			
 
-		client.on("message", (result) => {
-			try {
-				let dataDecrypted = JSON.parse(security.decryptSymmetric(result));
-
-				switch(dataDecrypted.type){
-					case 1:
-						// verificando se é necessario incluir o no
-						if(!sockets.find(x => x.address === dataDecrypted.address) &&
-						   !sockets.find(x => x.publicKey === dataDecrypted.publicKey)) {
-
-								this.connect(dataDecrypted);
-						}
-					break;
-
+			client.on("responseConnection", (result) => {
+				try {
+					let symmetric = JSON.parse(security.decryptKeys(result)).symmetric;
+					mySymmetric = symmetric;
+				} catch (err){
+					console.log("algo errado no retorno da simetrica");
 				}
-			} catch (err){
-				console.log("algo errado no retorno da simetrica");
-			}
-		});
+			});
 
-		// client.on('connect', function () {
-		// 	console.log("connect");
-		// });
-		// client.on('disconnect', function () {
-		// 	console.log("disconnect");
-		// });
-		// client.on('connecting', function (x) {
-		// 	console.log("connecting", x);
-		// });
-		// client.on('connect_failed', function () {
-		// 	console.log("connect_failed");
-		// });
-		// client.on('close', function () {
-		// 	console.log("close");
-		// });
-		// client.on('reconnect', function (a, b) {
-		// 	console.log("reconnect", a, b);
-		// });
-		// client.on('reconnecting', function (a, b) {
-		// 	console.log("reconnecting", a, b);
-		// });
-		// client.on('reconnect_failed', function () {
-		// 	console.log("reconnect_failed");
-		// });
+			client.on("message", (result) => {
+				try {
+					let dataDecrypted = JSON.parse(security.decryptSymmetric(result));
 
-		this.clients.push(client);
+					switch(dataDecrypted.type){
+						case 1:
+							this.connect(dataDecrypted);
+						break;
+
+					}
+				} catch (err){
+					console.log("algo errado no retorno da simetrica");
+				}
+			});
+
+			// client.on('connect', function () {
+			// 	console.log("connect");
+			// });
+			// client.on('disconnect', function () {
+			// 	console.log("disconnect");
+			// });
+			// client.on('connecting', function (x) {
+			// 	console.log("connecting", x);
+			// });
+			// client.on('connect_failed', function () {
+			// 	console.log("connect_failed");
+			// });
+			// client.on('close', function () {
+			// 	console.log("close");
+			// });
+			// client.on('reconnect', function (a, b) {
+			// 	console.log("reconnect", a, b);
+			// });
+			// client.on('reconnecting', function (a, b) {
+			// 	console.log("reconnecting", a, b);
+			// });
+			// client.on('reconnect_failed', function () {
+			// 	console.log("reconnect_failed");
+			// });
+
+			this.clients.push({client: client, address: address.address});
+		}
 	}
 
 	broadcast(str){
-		for (var i = sockets.length - 1; i >= 0; i--) {
+		for (var i = this.sockets.length - 1; i >= 0; i--) {
 			let data = security.encryptSymmetric(str);
-			io.to(sockets[i].socket).emit('message', data);
+			io.to(this.sockets[i].socket).emit('message', data);
 		}
 	}
 
