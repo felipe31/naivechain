@@ -1,36 +1,42 @@
 'use strict';
 var CryptoJS = require("crypto-js");
 var express = require("express");
-var bodyParser = require('body-parser');
+//var bodyParser = require('body-parser');
 var WebSocket = require("ws");
 var request = require('request');
 var fs = require('fs');
 var path = require('path');
-
 var crypto = require('crypto');
 const x509 = require('x509');
 
+var app = express();
+var http = require('http').Server(app);
+var ioClient = require('socket.io-client');
+var io = require('socket.io')(http);
+
+
 var programPub = "-----BEGIN CERTIFICATE-----\n\
-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\n\
+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\n\
+41x/fyUzsUALxYc=\n\
 -----END CERTIFICATE-----";
 
 var programPriv = "-----BEGIN RSA PRIVATE KEY-----\n\
@@ -61,9 +67,6 @@ deptmgmHwRSm5CbgE3huFp2OdXMYe6OH3Jky1TUH7bEBJvDoYNPnXbO3I5bOPjha\n\
 vT6KDq1GrZOCtsO21HxjIkVApx9cQ/7lkNjkMxXUFTn8WpTrnILT\n\
 -----END RSA PRIVATE KEY-----";
 
-//var issuer = x509.getIssuer(programPub);
-
-
 var block_file = 1000;
 var http_port = 3001;
 var p2p_port = 6001;
@@ -87,16 +90,16 @@ var getdados = () => {
 }
 
 stdin.addListener("data", function(d) {
-    // note:  d is an object, and when converted to a string it will
-    // end with a linefeed.  so we (rather crudely) account for that  
-    // with toString() and then trim() 
-    console.log("you entered: [" + 
-        d.toString().trim() + "]");
+	// note:  d is an object, and when converted to a string it will
+	// end with a linefeed.  so we (rather crudely) account for that  
+	// with toString() and then trim() 
+	console.log("you entered: [" + 
+		d.toString().trim() + "]");
 
-    if(d.toString().trim() == "get"){
-    	getdados();
-    }
-  });
+	if(d.toString().trim() == "get"){
+		getdados();
+	}
+});
 
 
 
@@ -116,7 +119,7 @@ class Block {
 }
 
 var password = '123patinhos321';
-var randomNumber = '0';
+var mySymmetric = '0';
 
 class Security {
 
@@ -138,6 +141,8 @@ class Security {
 
 	}
 
+	
+
 	signature(data, type){
 		let priv = '';
 		if(type == 0){
@@ -156,7 +161,15 @@ class Security {
 		return signature_hex;
 	}
 
-	verify(data, signature, pubKey){
+	extractPublicKey(pubKey){
+		try {
+			return x509.getIssuer(pubKey);
+		} catch (err) {
+			return false;
+		}
+	}
+
+	verifySignature(data, signature, pubKey){
 		const verifier = crypto.createVerify('RSA-SHA256');
 		verifier.update(data);
 		verifier.end();
@@ -167,17 +180,10 @@ class Security {
 	}
 
 	generateSymmetricKey(){
-		return crypto.randomBytes(64);
+		return crypto.randomBytes(64).toString('base64');
 	}
 
-	encryptSymmetric(str, type) {
-		let salt;
-		
-		if(type == 0){
-			salt = password;
-		} else {
-			salt = randomNumber;
-		}
+	encryptSymmetric(str, salt) {
 
 		str = new Buffer(str.toString('base64'), "utf8");
 		var cipher = crypto.createCipher("aes-256-ctr",salt)
@@ -188,16 +194,9 @@ class Security {
 	}
 
 	
-	decryptSymmetric(str, type) {
+	decryptSymmetric(str, salt) {
 
 		str = new Buffer(str, 'base64');
-
-		let salt;
-		if(type == 0){
-			salt = password;
-		} else {
-			salt = randomNumber;
-		}
 
 		var decipher = crypto.createDecipher("aes-256-ctr",salt)
 		str = Buffer.concat([decipher.update(str) , decipher.final()]);
@@ -206,9 +205,9 @@ class Security {
 
 	}
 
-	encryptKeys(str) {
-		
-		str = crypto.publicEncrypt(this.publicKey, new Buffer(str));
+	encryptKeys(str, pubKey) {
+
+		str = crypto.publicEncrypt(pubKey, new Buffer(str));
 
 		return str.toString('base64');
 	}
@@ -219,8 +218,6 @@ class Security {
 		return decrypted.toString('utf8');
 	}
 }
-
-var security = new Security();
 
 class Blockchain {
 
@@ -237,12 +234,12 @@ class Blockchain {
 							console.log(error); // Error!
 							console.log("erro excluir arquivos");
 						}
-					);
+						);
 				} else {
 					this.latestBlock = value[value.length-1];
 				}
 			}
-		);
+			);
 	}
 
 	deleteOldFiles(){
@@ -266,7 +263,7 @@ class Blockchain {
 	}
 
 	addBlock(blockData){
-		 
+
 		let newBlock = this.generateNextBlock(blockData);
 
 		if (this.isValidNewBlock(newBlock, this.latestBlock)) {
@@ -314,7 +311,7 @@ class Blockchain {
 				} else {
 					if(data){
 						try {
-							let log = security.decryptSymmetric(data, 0);
+							let log = security.decryptSymmetric(data, password);
 							resolve(JSON.parse(log));
 						} catch(e){
 							resolve("");
@@ -330,7 +327,7 @@ class Blockchain {
 
 	replace(newBlocks){
 
-		value = security.encryptSymmetric(JSON.stringify(newBlocks), 0);
+		value = security.encryptSymmetric(JSON.stringify(newBlocks), password);
 
 		fs.writeFile('data/data.txt', value, function (err) {
 			if (err) {
@@ -349,7 +346,7 @@ class Blockchain {
 					value = [block];
 				}
 
-				value = security.encryptSymmetric(JSON.stringify(value), 0);
+				value = security.encryptSymmetric(JSON.stringify(value), password);
 				
 				fs.writeFile('data/data.txt', value, function (err) {
 					if (err) {
@@ -367,7 +364,7 @@ class Blockchain {
 				console.log("dasdadadasdasdsadsadasdas");
 				console.log(error);
 			}
-		)		
+			)		
 	}
 
 
@@ -399,38 +396,218 @@ class Blockchain {
 	};
 };
 
-var initHttpServer = () => {
-	var app = express();
-	app.use(bodyParser.json());
 
-	app.get('/blocks', (req, res) => {
+class Connection {
 
-		blockchain.getAllBlocks().then(function (data){
-			res.send(data);
-		}).catch(function (err) {
-			res.send(err);
+	constructor() {
+		io.use(function (socket, next) {
+			//console.log(socket.request.connection);
+			let data = socket.handshake.query.data;
+
+				try {
+					// VERIFICADOR
+					if(!sockets.find(x => x.address === socket.request.connection.remoteAddress)){
+
+						let dataDecrypted = security.decryptSymmetric(data, password);
+						
+						dataDecrypted = JSON.parse(dataDecrypted);
+						
+						let publicKeyDecrypted = security.extractPublicKey(dataDecrypted.publicKey);
+						
+						if(publicKeyDecrypted != false){
+							if(publicKeyDecrypted.symmetric){
+								sockets.push({'socket':socket.id, 'address': socket.request.connection.remoteAddress, 'publicKey': dataDecrypted.publicKey, 'symmetric': publicKeyDecrypted.symmetric,'new':0});
+							} else {
+								let symmetric = security.generateSymmetricKey();
+								sockets.push({'socket':socket.id, 'address': socket.request.connection.remoteAddress, 'publicKey': dataDecrypted.publicKey, 'symmetric': symmetric, 'new':1});
+							}
+							
+
+							next();
+						} else {
+							console.log("Peer try to connect, but not valid");
+							next(new Error("not valid!!"));
+							socket.disconnect();
+						};
+					} else {
+						console.log("Peer try to connect, but is already connected");
+						next(new Error("Peer try to connect, but is already connected"));
+						socket.disconnect();
+					}
+				} catch (err) {
+					console.log("Peer try to connect, but not valid");
+					next(new Error("not valid!!"));
+					socket.disconnect();
+				}
 		});
+
+		io.on('connection', function(socket){
+			let peer = sockets.find(x => x.socket === socket.id);
+			if(peer.new == 1){
+				let symmetricEncripted = security.encryptKeys(JSON.stringify({'symmetric': peer.symmetric}), peer.publicKey);
+				console.log("connected : "+socket.request.connection.remoteAddress);
+				io.to(socket.id).emit('responseConnection', symmetricEncripted);
+				// manda broadcast para os outros 
+				let data = {'type': 1, 'address': socket.request.connection.remoteAddress, 'publicKey': dataDecrypted.publicKey, 'symmetric': symmetric};
+				this.connectAddress(data);
+				this.broadcast(JSON.stringify(data));
+			} else{
+				// otimizar, vascular os clientes pra verificar se ele ja nao foi adicionado 
+				let data = {'type': 1, 'address': socket.request.connection.remoteAddress, 'publicKey': dataDecrypted.publicKey, 'symmetric': symmetric};
+				this.connectAddress(data);
+			}
+
+		});
+
+		http.listen(p2p_port, function(){
+			console.log('listening on *:' + p2p_port);
+		});
+
+		this.clients = [];
+	}
+
+	connectAddress(address){
+
+		let client;
+
+		if(address.type == 0){
+			let data = security.encryptSymmetric(JSON.stringify({publicKey: security.publicKey}), password);
+
+			client = ioClient.connect(address, {
+				query: {data: data}
+			});
+		} else {
+			let data = security.encryptSymmetric(JSON.stringify({publicKey: security.publicKey}), password);
+
+			client = ioClient.connect(address, {
+				query: {data: data}
+			});
+		}
 		
-	});
 
-	app.post('/mineBlock', (req, res) => {
-		blockchain.addBlock(req.body.data);
+		client.on("responseConnection", (result) => {
+			try {
+				let symmetric = JSON.parse(security.decryptKeys(result)).symmetric;
+				mySymmetric = symmetric;
+			} catch (err){
+				console.log("algo errado no retorno da simetrica");
+			}
+		});
+
+		client.on("message", (result) => {
+			try {
+				let dataDecrypted = JSON.parse(security.decryptSymmetric(result, mySymmetric));
+
+				switch(dataDecrypted.type){
+					case 1:
+						// verificando se é necessario incluir o no
+						if(!sockets.find(x => x.symmetric === dataDecrypted.symmetric) && dataDecrypted.symmetric != mySymmetric){
+							this.connect(dataDecrypted);
+						}
+					break;
+
+				}
+			} catch (err){
+				console.log("algo errado no retorno da simetrica");
+			}
+		});
+
+		// client.on('connect', function () {
+		// 	console.log("connect");
+		// });
+		// client.on('disconnect', function () {
+		// 	console.log("disconnect");
+		// });
+		// client.on('connecting', function (x) {
+		// 	console.log("connecting", x);
+		// });
+		// client.on('connect_failed', function () {
+		// 	console.log("connect_failed");
+		// });
+		// client.on('close', function () {
+		// 	console.log("close");
+		// });
+		// client.on('reconnect', function (a, b) {
+		// 	console.log("reconnect", a, b);
+		// });
+		// client.on('reconnecting', function (a, b) {
+		// 	console.log("reconnecting", a, b);
+		// });
+		// client.on('reconnect_failed', function () {
+		// 	console.log("reconnect_failed");
+		// });
+
+		this.clients.push(client);
+	}
+
+	broadcast(str){
+		for (var i = sockets.length - 1; i >= 0; i--) {
+			let data = security.encryptSymmetric(str, sockets[i].symmetric);
+			io.to(sockets[i].socket).emit('message', data);
+		}
+	}
+
+}
+
+
+var security = new Security();
+var blockchain = new Blockchain();
+var connection = new Connection();
+connection.connectAddress({'address':"http://localhost:6001", 'type': 0});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// var initHttpServer = () => {
+// 	var app = express();
+// 	app.use(bodyParser.json());
+
+// 	app.get('/blocks', (req, res) => {
+
+// 		blockchain.getAllBlocks().then(function (data){
+// 			res.send(data);
+// 		}).catch(function (err) {
+// 			res.send(err);
+// 		});
 		
-		res.send();
-	});
+// 	});
 
-	app.get('/peers', (req, res) => {
-		//console.log(sockets[0]);
-		res.send(sockets.map(s => s._socket.remoteAddress + ':' + s._socket.remotePort));
-	});
+// 	app.post('/mineBlock', (req, res) => {
+// 		blockchain.addBlock(req.body.data);
+		
+// 		res.send();
+// 	});
 
-	app.post('/addPeer', (req, res) => {
-		connectToPeers([req.body.peer]);
-		res.send();
-	});
+// 	app.get('/peers', (req, res) => {
+// 		//console.log(sockets[0]);
+// 		res.send(sockets.map(s => s._socket.remoteAddress + ':' + s._socket.remotePort));
+// 	});
 
-	app.listen(http_port, () => console.log('Listening http on port: ' + http_port));
-};
+// 	app.post('/addPeer', (req, res) => {
+// 		connectToPeers([req.body.peer]);
+// 		res.send();
+// 	});
+
+// 	app.listen(http_port, () => console.log('Listening http on port: ' + http_port));
+// };
 
 
 var initP2PServer = () => {
@@ -473,22 +650,22 @@ var initMessageHandler = (ws) => {
 		console.log('Received message' + JSON.stringify(message));
 		switch (message.type) {
 			case MessageType.QUERY_LATEST:
-				write(ws, responseLatestMsg());
-				break;
+			write(ws, responseLatestMsg());
+			break;
 			case MessageType.QUERY_ALL:
-				blockchain.getAllBlocks().then(
-					value => {
-						write(ws, responseChainMsg(value));
-					},
-					error => {
+			blockchain.getAllBlocks().then(
+				value => {
+					write(ws, responseChainMsg(value));
+				},
+				error => {
 						console.log(error); // Error!
 						console.log("erro de leitura");
 					}
-				);
-				break;
+					);
+			break;
 			case MessageType.RESPONSE_BLOCKCHAIN:
-				handleBlockchainResponse(message);
-				break;
+			handleBlockchainResponse(message);
+			break;
 		}
 	});
 };
@@ -508,7 +685,7 @@ var connectToPeers = (newPeers) => {
 		var ws = new WebSocket(serv);
 		ws.on('open', () => initConnection(ws));
 		ws.on('error', () => {
-		   console.log('connection failed')
+			console.log('connection failed')
 		});
 	});
 };
@@ -558,7 +735,8 @@ var write = (ws, message) => ws.send(JSON.stringify(message));
 var broadcast = (message) => sockets.forEach(socket => write(socket, message));
 
 
-var blockchain = new Blockchain();
-connectToPeers(initialPeers);
-initHttpServer();
-initP2PServer();
+
+
+//connectToPeers(initialPeers);
+//initHttpServer();
+//initP2PServer();
