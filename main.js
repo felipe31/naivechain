@@ -183,10 +183,10 @@ class Security {
 		return crypto.randomBytes(64).toString('base64');
 	}
 
-	encryptSymmetric(str, salt) {
+	encryptSymmetric(str) {
 
 		str = new Buffer(str.toString('base64'), "utf8");
-		var cipher = crypto.createCipher("aes-256-ctr",salt)
+		var cipher = crypto.createCipher("aes-256-ctr",password)
 		str = Buffer.concat([cipher.update(str),cipher.final()]);
 		
 
@@ -194,11 +194,11 @@ class Security {
 	}
 
 	
-	decryptSymmetric(str, salt) {
+	decryptSymmetric(str) {
 
 		str = new Buffer(str, 'base64');
 
-		var decipher = crypto.createDecipher("aes-256-ctr",salt)
+		var decipher = crypto.createDecipher("aes-256-ctr",password)
 		str = Buffer.concat([decipher.update(str) , decipher.final()]);
 
 		return str.toString('utf8');
@@ -311,7 +311,7 @@ class Blockchain {
 				} else {
 					if(data){
 						try {
-							let log = security.decryptSymmetric(data, password);
+							let log = security.decryptSymmetric(data);
 							resolve(JSON.parse(log));
 						} catch(e){
 							resolve("");
@@ -327,7 +327,7 @@ class Blockchain {
 
 	replace(newBlocks){
 
-		value = security.encryptSymmetric(JSON.stringify(newBlocks), password);
+		value = security.encryptSymmetric(JSON.stringify(newBlocks));
 
 		fs.writeFile('data/data.txt', value, function (err) {
 			if (err) {
@@ -346,7 +346,7 @@ class Blockchain {
 					value = [block];
 				}
 
-				value = security.encryptSymmetric(JSON.stringify(value), password);
+				value = security.encryptSymmetric(JSON.stringify(value));
 				
 				fs.writeFile('data/data.txt', value, function (err) {
 					if (err) {
@@ -408,22 +408,21 @@ class Connection {
 					// VERIFICADOR
 					if(!sockets.find(x => x.address === socket.request.connection.remoteAddress)){
 
-						let dataDecrypted = security.decryptSymmetric(data, password);
+						let dataDecrypted = security.decryptSymmetric(data);
 						
 						dataDecrypted = JSON.parse(dataDecrypted);
 						
 						let publicKeyDecrypted = security.extractPublicKey(dataDecrypted.publicKey);
 						
 						if(publicKeyDecrypted != false){
-							if(publicKeyDecrypted.symmetric){
-								sockets.push({'socket':socket.id, 'address': socket.request.connection.remoteAddress, 'publicKey': dataDecrypted.publicKey, 'symmetric': publicKeyDecrypted.symmetric,'new':0});
+							if(!sockets.find(x => x.publicKey === publicKeyDecrypted)){
+								sockets.push({'socket':socket.id, 'address': socket.request.connection.remoteAddress, 'publicKey': dataDecrypted.publicKey});
+								next();
 							} else {
-								let symmetric = security.generateSymmetricKey();
-								sockets.push({'socket':socket.id, 'address': socket.request.connection.remoteAddress, 'publicKey': dataDecrypted.publicKey, 'symmetric': symmetric, 'new':1});
+								console.log("Peer try to connect, but we already have same public key");
+								next(new Error("Peer try to connect, but is already connected"));
+								socket.disconnect();
 							}
-							
-
-							next();
 						} else {
 							console.log("Peer try to connect, but not valid");
 							next(new Error("not valid!!"));
@@ -443,19 +442,17 @@ class Connection {
 		let selfie = this;
 		io.on('connection', function(socket){
 			let peer = sockets.find(x => x.socket === socket.id);
-			if(peer.new == 1){
-				let symmetricEncripted = security.encryptKeys(JSON.stringify({'symmetric': peer.symmetric}), peer.publicKey);
-				console.log("connected : "+socket.request.connection.remoteAddress);
-				io.to(socket.id).emit('responseConnection', symmetricEncripted);
-				// manda broadcast para os outros 
-				let data = {'type': 1, 'address': socket.request.connection.remoteAddress, 'publicKey': peer.publicKey, 'symmetric': peer.symmetric};
-				selfie.connectAddress(data);
-				selfie.broadcast(JSON.stringify(data));
-			} else{
-				// otimizar, vascular os clientes pra verificar se ele ja nao foi adicionado 
-				let data = {'type': 1, 'address': socket.request.connection.remoteAddress, 'publicKey': peer.publicKey, 'symmetric': peer.symmetric};
-				selfie.connectAddress(data);
+			// let symmetricEncripted = security.encryptKeys(JSON.stringify({'symmetric': peer.symmetric}), peer.publicKey);
+			// console.log("connected : "+socket.request.connection.remoteAddress);
+			// io.to(socket.id).emit('responseConnection', symmetricEncripted);
+			// manda broadcast para os outros 
+			let ip = socket.request.connection.remoteAddress;
+			if (ip.substr(0, 7) == "::ffff:") {
+				ip = ip.substr(7)
 			}
+			let data = {'address': ip, 'publicKey': peer.publicKey};
+			selfie.connectAddress(data);
+			selfie.broadcast(JSON.stringify(data));
 
 		});
 
@@ -469,20 +466,11 @@ class Connection {
 	connectAddress(address){
 
 		let client;
+		let data = security.encryptSymmetric(JSON.stringify({publicKey: security.publicKey}));
 
-		if(address.type == 0){
-			let data = security.encryptSymmetric(JSON.stringify({publicKey: security.publicKey}), password);
-
-			client = ioClient.connect(address.address, {
-				query: {data: data}
-			});
-		} else {
-			let data = security.encryptSymmetric(JSON.stringify({publicKey: security.publicKey}), password);
-
-			client = ioClient.connect(address.address, {
-				query: {data: data}
-			});
-		}
+		client = ioClient.connect('http://'+address.address+":"+p2p_port, {
+			query: {data: data}
+		});
 		
 
 		client.on("responseConnection", (result) => {
@@ -496,13 +484,15 @@ class Connection {
 
 		client.on("message", (result) => {
 			try {
-				let dataDecrypted = JSON.parse(security.decryptSymmetric(result, mySymmetric));
+				let dataDecrypted = JSON.parse(security.decryptSymmetric(result));
 
 				switch(dataDecrypted.type){
 					case 1:
 						// verificando se é necessario incluir o no
-						if(!sockets.find(x => x.symmetric === dataDecrypted.symmetric) && dataDecrypted.symmetric != mySymmetric){
-							this.connect(dataDecrypted);
+						if(!sockets.find(x => x.address === dataDecrypted.address) &&
+						   !sockets.find(x => x.publicKey === dataDecrypted.publicKey)) {
+
+								this.connect(dataDecrypted);
 						}
 					break;
 
@@ -542,7 +532,7 @@ class Connection {
 
 	broadcast(str){
 		for (var i = sockets.length - 1; i >= 0; i--) {
-			let data = security.encryptSymmetric(str, sockets[i].symmetric);
+			let data = security.encryptSymmetric(str);
 			io.to(sockets[i].socket).emit('message', data);
 		}
 	}
@@ -553,7 +543,7 @@ class Connection {
 var security = new Security();
 var blockchain = new Blockchain();
 var connection = new Connection();
-connection.connectAddress({'address':"http://localhost:6001", 'type': 0});
+//connection.connectAddress({'address':"localhost"});
 
 
 
