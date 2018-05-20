@@ -341,7 +341,7 @@ class Blockchain {
 
 	replace(newBlocks){
 
-		value = security.encryptSymmetric(JSON.stringify(newBlocks));
+		let value = security.encryptSymmetric(JSON.stringify(newBlocks));
 
 		fs.writeFile('data/data.txt', value, function (err) {
 			if (err) {
@@ -351,27 +351,8 @@ class Blockchain {
 	}
 
 	pushBlock(block){
-		let err = 0;
-		if(block.ip != ipAddress.address() && block.ip != "0.0.0.0"){
-			let peer = sockets.find(x => x.ip === block.ip);
-			if(peer){
-				if(peer.publicKey == block.publicKey){
-					if(!security.verifySignature(block.data, block.signature, block.publicKey)){
-						console.log("the signature not match with publicKey");
-						err = 1;
-					}
-				} else {
-					console.log("the public key of the connected peer is not the same");
-					err = 1;
-				}
-			} else {
-				console.log("peer is not connected");
-				err = 1;
-			}
+		if(!security.verifySignature(block.data, block.signature, block.publicKey)){
 			
-		}
-
-		if(err == 0){
 			this.getAllBlocks().then(
 				value => {
 					if(value){
@@ -399,6 +380,8 @@ class Blockchain {
 				console.log(error);
 			}
 			)
+		} else {
+			console.log("the signature not match with publicKey");
 		}
 		
 	}
