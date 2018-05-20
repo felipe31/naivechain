@@ -441,8 +441,12 @@ class Connection {
 			//console.log(socket.request.connection);
 			let data = socket.handshake.query.data;
 				try {
+					let address = socket.request.connection.remoteAddress;
+						if (address.substr(0, 7) == "::ffff:") {
+							address = address.substr(7)
+						}
 					// VERIFICADOR
-					if(!sockets.find(x => x.address === socket.request.connection.remoteAddress)){
+					if(!sockets.find(x => x.address === address) && address != ipAddress.address()){
 						let dataDecrypted = JSON.parse(security.decryptSymmetric(data));
 						
 						let publicKeyExtracted = security.extractPublicKey(dataDecrypted.publicKey);
@@ -450,10 +454,7 @@ class Connection {
 						if(publicKeyExtracted != false){
 							if(!sockets.find(x => x.publicKey === dataDecrypted.publicKey))
 							{
-								let address = socket.request.connection.remoteAddress;
-								if (address.substr(0, 7) == "::ffff:") {
-									address = address.substr(7)
-								}
+								
 
 								sockets.push({'socket':socket.id, 'address': address, 'publicKey': dataDecrypted.publicKey});
 								next();
@@ -501,19 +502,20 @@ class Connection {
 
 			socket.on('message', (result) => {
 				
+				let dataDecrypted = JSON.parse(security.decryptSymmetric(result));
+
+				switch (dataDecrypted.type) {
+
+					case MessageType.QUERY_LATEST:
+						selfie.write(socket.id, selfie.responseLatestMsg());
+					break;
+					case MessageType.RESPONSE_BLOCKCHAIN:
+						selfie.handleBlockchainResponse(dataDecrypted);
+					break;
+				}	
 
 				try {
-					let dataDecrypted = JSON.parse(security.decryptSymmetric(result));
-
-					switch (dataDecrypted.type) {
-
-						case MessageType.QUERY_LATEST:
-							selfie.write(socket.id, selfie.responseLatestMsg());
-						break;
-						case MessageType.RESPONSE_BLOCKCHAIN:
-							selfie.handleBlockchainResponse(dataDecrypted);
-						break;
-					}
+					
 
 				} catch (err){
 					console.log("package damaged server");
