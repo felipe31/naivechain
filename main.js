@@ -496,9 +496,7 @@ class Connection {
 				if (index !== -1) {
 					sockets.splice(index, 1);
 				}
-
-				console.log(sockets);
-				console.log('user disconnected');
+				console.log('peer disconnected');
 			});
 
 			socket.on('message', (result) => {
