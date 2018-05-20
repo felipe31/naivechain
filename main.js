@@ -490,6 +490,17 @@ class Connection {
 			selfie.connectAddress(data);
 			selfie.broadcast(JSON.stringify(data));
 
+			socket.on('disconnect', (result) => {
+				let index = sockets.findIndex(x => x.socket === socket.id);
+				console.log(index);
+				if (index !== -1) {
+					sockets.splice(index, 1);
+				}
+
+				console.log(sockets);
+				console.log('user disconnected');
+			});
+
 			socket.on('message', (result) => {
 				
 
@@ -497,19 +508,12 @@ class Connection {
 					let dataDecrypted = JSON.parse(security.decryptSymmetric(result));
 
 					switch (dataDecrypted.type) {
+
 						case MessageType.QUERY_LATEST:
 							selfie.write(socket.id, selfie.responseLatestMsg());
 						break;
-						case MessageType.QUERY_ALL:
-							blockchain.getAllBlocks().then(
-								value => {
-									selfie.write(socket.id, selfie.responseChainMsg());
-								},
-								error => {
-								console.log(error); // Error!
-								console.log("erro de leitura");
-							}
-							);
+						case MessageType.RESPONSE_BLOCKCHAIN:
+							selfie.handleBlockchainResponse(dataDecrypted);
 						break;
 					}
 
@@ -584,6 +588,20 @@ class Connection {
 						break;
 						case MessageType.RESPONSE_BLOCKCHAIN:
 							selfie.handleBlockchainResponse(dataDecrypted);
+						break;
+						case MessageType.QUERY_LATEST:
+							client.emit('message', security.encryptSymmetric(selfie.responseLatestMsg()));
+						break;
+						case MessageType.QUERY_ALL:
+							blockchain.getAllBlocks().then(
+								value => {
+									client.emit('message', security.encryptSymmetric(selfie.responseChainMsg(value)) );
+								},
+								error => {
+								console.log(error); // Error!
+								console.log("erro de leitura");
+							}
+							);
 						break;
 
 					}
