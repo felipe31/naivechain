@@ -1,19 +1,27 @@
 {
   "name": "naivechain",
   "version": "1.0.0",
-  "description": "",
+  "description": "blockchain",
+  "main": "main.js",
   "scripts": {
-    "start": "node main.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Felipe31/naivechain.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Felipe31/naivechain/issues"
+  },
+  "homepage": "https://github.com/Felipe31/naivechain#readme",
+  "keywords": [],
   "dependencies": {
-    "body-parser": "^1.15.2",
-    "crypto-js": "^3.1.6",
-    "express": "~4.11.1",
-    "request": "^2.85.0",
+    "express": "^4.16.3",
+    "ip": "^1.1.5",
     "socket.io": "^2.1.1",
-    "ws": "^1.1.0"
-  },
-  "engines": {
-    "node": ">=4.3.2"
+    "socket.io-client": "^2.1.1",
+    "x509": "^0.3.3"
   }
 }
