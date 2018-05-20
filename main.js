@@ -435,7 +435,8 @@ class Connection {
 						let publicKeyExtracted = security.extractPublicKey(dataDecrypted.publicKey);
 						
 						if(publicKeyExtracted != false){
-							if(!sockets.find(x => x.publicKey === dataDecrypted.publicKey))
+
+							if(!sockets.find(x => x.publicKey === dataDecrypted.publicKey) && security.publicKey != dataDecrypted.publicKey)
 							{
 								
 
@@ -485,20 +486,18 @@ class Connection {
 
 			socket.on('message', (result) => {
 				
-				let dataDecrypted = JSON.parse(security.decryptSymmetric(result));
-
-				switch (dataDecrypted.type) {
-
-					case MessageType.QUERY_LATEST:
-						selfie.write(socket.id, selfie.responseLatestMsg());
-					break;
-					case MessageType.RESPONSE_BLOCKCHAIN:
-						selfie.handleBlockchainResponse(dataDecrypted);
-					break;
-				}	
-
 				try {
-					
+					let dataDecrypted = JSON.parse(security.decryptSymmetric(result));
+
+					switch (dataDecrypted.type) {
+
+						case MessageType.QUERY_LATEST:
+							selfie.write(socket.id, selfie.responseLatestMsg());
+						break;
+						case MessageType.RESPONSE_BLOCKCHAIN:
+							selfie.handleBlockchainResponse(dataDecrypted);
+						break;
+					}
 
 				} catch (err){
 					console.log("package damaged server");
@@ -581,9 +580,9 @@ class Connection {
 									client.emit('message', security.encryptSymmetric(selfie.responseChainMsg(value)) );
 								},
 								error => {
-								console.log(error); // Error!
-								console.log("erro de leitura");
-							}
+									console.log(error); // Error!
+									console.log("erro de leitura");
+								}
 							);
 						break;
 
@@ -600,26 +599,9 @@ class Connection {
 			});
 
 			client.on('disconnect', function () {
-				console.log("disconnect");
+				console.log("one peer disconnected");
 			});
-			// client.on('connecting', function (x) {
-			// 	console.log("connecting", x);
-			// });
-			// client.on('connect_failed', function () {
-			// 	console.log("connect_failed");
-			// });
-			// client.on('close', function () {
-			// 	console.log("close");
-			// });
-			// client.on('reconnect', function (a, b) {
-			// 	console.log("reconnect", a, b);
-			// });
-			// client.on('reconnecting', function (a, b) {
-			// 	console.log("reconnecting", a, b);
-			// });
-			// client.on('reconnect_failed', function () {
-			// 	console.log("reconnect_failed");
-			// });
+
 
 			clients.push({client: client, address: address.address});
 		} else {
