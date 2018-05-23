@@ -87,35 +87,6 @@ var password = '123patinhos321';
 
 
 
-
-
-
-var stdin = process.openStdin();
-
-var getdados = () => {
-	blockchain.getAllBlocks().then(function (data){
-		console.log(data);
-	}).catch(function (err) {
-		console.log("error");
-	});
-}
-
-stdin.addListener("data", function(d) {
-	// note:  d is an object, and when converted to a string it will
-	// end with a linefeed.  so we (rather crudely) account for that  
-	// with toString() and then trim() 
-	console.log("you entered: [" + 
-		d.toString().trim() + "]");
-
-	if(d.toString().trim() == "get"){
-		getdados();
-	}
-});
-
-
-
-
-
 class Block {
 	constructor(index, previousHash, timestamp, data, hash, creator, publicKey, signature, ip) {
 		this.index = index;
@@ -272,7 +243,7 @@ class Blockchain {
 
 	getGenesisBlock(){
 		let signature = security.signature("genesis", 1);
-		return new Block(0, "0", 1465154705, "genesis", "816534932c2b7154836da6afc367695e6337db8a921823784c14378abed4f7d7", "Blockchain Services", programPub, signature, "0.0.0.0");
+		return new Block(0, "0", 1465154705000, "genesis", "816534932c2b7154836da6afc367695e6337db8a921823784c14378abed4f7d7", "Blockchain Services", programPub, signature, "0.0.0.0");
 	}
 
 	addBlock(blockData){
@@ -753,46 +724,103 @@ function validaIp(ip){
 }
 
 function pesquisaLogData(timestampStart, timestampEnd){
-	console.log("Function not implemented");
-
+	console.log("Follow the result of your search by timestamp");
 
 	blockchain.getAllBlocks().then(function (blocks){
+		var result = [];
 		var i;
-		for(i = 0; i < blocks.length;i++){
-			console.log("-------");
-			console.log(timestampStart);
-			console.log(timestampEnd);
-			console.log(blocks[i]["timestamp"]);
-
+		for(i = 1; i < blocks.length; i++){
+			
 			if(blocks[i]["timestamp"] >= timestampStart && blocks[i]["timestamp"] <= timestampEnd){
-				console.log("-------");
-				console.log(timestampStart);
-				console.log(timestampEnd);
-				console.log(blocks[i]["timestamp"]);
+				result.push(blocks[i]);
 			}
 		}
+		if(result.length < 1){	
+			console.log("No result found");
+
+		}else 
+			console.log(result);
 	});
 
-
-
-
-
-	return true;
 }
 
-function pesquisaLogPK(){
-	console.log("Function not implemented");
-	return true;
+function pesquisaLogPK(pathPK){
+	console.log("Follow the result of your search by PK");
+	try{
+		fs.readFile(pathPK, 'utf8', function(err, publicKey){
+			if (err) {
+				console.log("File not found!");
+			} else {
+				if(publicKey){
+
+					blockchain.getAllBlocks().then(function (blocks){
+						var result = [];
+						var i;
+
+						for(i = 1; i < blocks.length; i++){
+
+							if(blocks[i]["publicKey"].trim() === publicKey.trim()){
+								result.push(blocks[i]);
+							}
+						}
+						if(result.length < 1){	
+							console.log("No result found");
+
+						}else 
+							console.log(result);
+					});
+
+				} else{
+					console.log("Error on file content");
+				}
+
+			}
+		});
+
+	}catch(e){
+		console.log("Error on reading the file");
+	}
+
 }
 
-function pesquisaLogCriador(){
-	console.log("Function not implemented");
-	return true;
+function pesquisaLogCriador(creator){
+	console.log("Follow the result of your search by creator");
+
+	blockchain.getAllBlocks().then(function (blocks){
+		var result = [];
+		var i;
+		for(i = 1; i < blocks.length; i++){
+			
+			if(blocks[i]["creator"] === creator){
+				result.push(blocks[i]);
+			}
+		}
+		if(result.length < 1){	
+			console.log("No result found");
+
+		}else 
+			console.log(result);
+	});
 }
 
-function pesquisaLogIp(){
-	console.log("Function not implemented");
-	return true;
+function pesquisaLogIp(ip){
+	console.log("Follow the result of your search by IP");
+
+	blockchain.getAllBlocks().then(function (blocks){
+		var result = [];
+		var i;
+		for(i = 1; i < blocks.length; i++){
+			
+			if(blocks[i]["ip"] === ip){
+				result.push(blocks[i]);
+			}
+		}
+		if(result.length < 1){	
+			console.log("No result found");
+
+		}else 
+			console.log(result);
+	});
 }
 
 
@@ -826,10 +854,16 @@ stdin.addListener("data", function(d) {
 				var composedDateStart = validaData(data);
 				// Onde validaData() retorna True se "data" estiver no formato correto; 		
 				if (composedDateStart) {
-					var composedDateEnd = new Date(composedDateStart.getTime());
-					composedDateEnd.setHours(23);
-					composedDateEnd.setMinutes(59);
-					composedDateEnd.setSeconds(59);				
+					var composedDateEnd;
+					if(x[3] == undefined){
+						composedDateEnd = new Date(composedDateStart.getTime());
+						composedDateEnd.setHours(23);
+						composedDateEnd.setMinutes(59);
+						composedDateEnd.setSeconds(59);				
+					} else{
+						composedDateEnd = validaData(x[3]);
+						if(!composedDateEnd) break;
+					}
 					// Onde pesquisaLogData() retorna Log com a data correspondente;
 					pesquisaLogData(composedDateStart.getTime(), composedDateEnd.getTime());
 				} else {
@@ -844,7 +878,7 @@ stdin.addListener("data", function(d) {
 				if (validaCaminho(caminho)) {
 
 					// Onde pesquisaLogPK() retorna Log com a PK correpondente;
-					pesquisaLogPK();
+					pesquisaLogPK(caminho);
 				} else {
 					console.log("Caminho da Chave Pública incorreto");
 				}
@@ -853,10 +887,14 @@ stdin.addListener("data", function(d) {
 			case '--creator':
 			case '-c':
 				var criador = x[2];
+
+				var i;
+				for(i = 3; x[i] !=  undefined; i++) criador = criador.concat(" ", x[i]);
+
 				// Onde validaCriador() retorna True se o "criador" estiver correto;
 				if (validaCriador(criador)) {
 					// Onde pesquisaLogPK() retorna Log do "criador" correspondente;
-					pesquisaLogCriador();
+					pesquisaLogCriador(criador);
 				} else {
 					console.log("Criador incorreto");
 				} 
@@ -867,7 +905,7 @@ stdin.addListener("data", function(d) {
 				// Onde validaIp() retorna True se o "ip" estiver correto;
 				if (validaIp(ip)) {
 					// Onde pesquisaLogIp() retorna Log do "Ip" correspondente;
-					pesquisaLogIp();
+					pesquisaLogIp(ip);
 				} else {
 					console.log("Ip incorreto");
 				} 
