@@ -79,28 +79,6 @@ var MessageType = {
 	RESPONSE_BLOCKCHAIN: 2
 };
 
-var stdin = process.openStdin();
-
-var getdados = () => {
-	blockchain.getAllBlocks().then(function (data){
-		console.log(data);
-	}).catch(function (err) {
-		console.log("error");
-	});
-}
-
-stdin.addListener("data", function(d) {
-	// note:  d is an object, and when converted to a string it will
-	// end with a linefeed.  so we (rather crudely) account for that  
-	// with toString() and then trim() 
-	console.log("you entered: [" + 
-		d.toString().trim() + "]");
-
-	if(d.toString().trim() == "get"){
-		getdados();
-	}
-});
-
 
 
 
@@ -751,7 +729,6 @@ function validaData(date){
     var m = matches[2] - 1;
     var y = matches[3];
     var composedDate = new Date(y, m, d);
-    console.log(composedDate.getDate());
     if(composedDate.getDate() == d &&
             composedDate.getMonth() == m &&
             composedDate.getFullYear() == y)
@@ -765,16 +742,34 @@ function validaCaminho(path){
 }
 
 function validaCriador(criator){
-	console.log("Function not implemented");
-	return true;
+	return typeof(criator) == "string";
 }
 
 function validaIp(ip){
 	return /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ip);
 }
 
-function pesquisaLogData(timestamp){
+function pesquisaLogData(timestampStart, timestampEnd){
 	console.log("Function not implemented");
+
+
+	blockchain.getAllBlocks().then(function (blocks){
+		var i;
+		for(i = 0; i < blocks.length;i++){
+
+			if(blocks[i]["timestamp"] >= timestampStart && blocks[i]["timestamp"] <= timestampEnd){
+				console.log("-------");
+				console.log(timestampStart);
+				console.log(timestampEnd);
+				console.log(blocks[i]["timestamp"]);
+			}
+		}
+	});
+
+
+
+
+
 	return true;
 }
 
@@ -821,13 +816,15 @@ stdin.addListener("data", function(d) {
 			case '--timestamp':
 			case '-t':
 				var data = x[2]; 
-				console.log(data);
-				var composedDate = validaData(data);
+				var composedDateStart = validaData(data);
 				// Onde validaData() retorna True se "data" estiver no formato correto; 		
-				if (composedDate) {
-					console.log(composedDate.getTime());
+				if (composedDateStart) {
+					var composedDateEnd = new Date(composedDateStart.getTime());
+					composedDateEnd.setHours(23);
+					composedDateEnd.setMinutes(59);
+					composedDateEnd.setSeconds(59);				
 					// Onde pesquisaLogData() retorna Log com a data correspondente;
-					pesquisaLogData(composedDate.getTime());
+					pesquisaLogData(composedDateStart.getTime(), composedDateEnd.getTime());
 				} else {
 					console.log("Parâmetro data incorreto");
 				}
