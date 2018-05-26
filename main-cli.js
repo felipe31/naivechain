@@ -835,11 +835,6 @@ var getdados = () => {
 }
 
 stdin.addListener("data", function(d) {
-    // note:  d is an object, and when converted to a string it will
-    // end with a linefeed.  so we (rather crudely) account for that  
-    // with toString() and then trim() 
-	console.log("you entered: [" + d.toString().trim() + "]");
-
 
 	var opt = d.toString().trim();
 	var x = opt.split(' ');
@@ -910,7 +905,13 @@ stdin.addListener("data", function(d) {
 					console.log("Ip incorreto");
 				} 
 				break;
-			default: console.log("opção inválida"); break;
+			case '--help':
+			case '-?':
+			case '-h':
+			default: 
+				console.log("Usage: search <option>\n\n");
+				console.log("\t-t, --timestamp <timestamp start> [<timestamp end>]\n\n\t\t\tIf <timestamp start> and <timestamp end> are defined, the command\n\t\t\treturns all the logs between both dates. If only <timestamp start>\n\t\t\tis defined, the command returns all the logs of the day.\n\n\t\t\tThe timestamp needs to be in the following format:\n\t\t\tdd/mm/yyyy");
+
 		}
 	}
   });
