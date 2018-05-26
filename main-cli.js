@@ -745,6 +745,7 @@ function printBlockUser(results){
 		console.log("Creation date: "+date);
 		console.log("Data: "+results[i]["data"]);
 		console.log("IP: "+results[i]["ip"]);
+		console.log("Public Key: "+results[i]["publicKey"]);
 		console.log("-----------------\n");
 	}
 
@@ -948,12 +949,22 @@ stdin.addListener("data", function(d) {
 			case '-?':
 			case '-h':
 			default: 
-				console.log("Usage: search <option>\n\n");
-				console.log("\t-t, --timestamp <timestamp start> [<timestamp end>]\n\n\t\t\tIf <timestamp start> and <timestamp end> are defined, the command\n\t\t\treturns all the logs between both dates. If only <timestamp start>\n\t\t\tis defined, the command returns all the logs of the day.\n\n\t\t\tThe timestamp needs to be in the following format:\n\t\t\tdd/mm/yyyy");
+				console.log("\n\nUsage: search <option>");
+				console.log("\n\t-t, --timestamp <timestamp start> [<timestamp end>]\n\t\tIf <timestamp start> and <timestamp end> are defined, the command\n\t\treturns all the logs between both dates. If only <timestamp start>\n\t\tis defined, the command returns all the logs of the day.\n\n\t\tThe timestamp needs to be in the following format:\n\t\tdd/mm/yyyy");
+				console.log("\n\t-p --public-key-path <public key path>\n\t\tIt returns the logs created using the <public key path>.\n\t\tThe <public key path> must include the full path, the name of the\n\t\tfile and the extension.");
+				console.log("\n\t-c --creator <creator name>\n\t\tIt returns the logs created by <creator name>.\n\t\tThe name may have more than one word.");
+				console.log("\n\t-i --ip <ip>\n\t\tIt returns the logs created by the ip <ip>.\n\t\tThe ip must be version 4.");
+				console.log("\n\t-h -? --help\n\t\tIt shows this information.");
+
 
 		}
 	} else if (x[0] != "search") {
-		console.log("Comando inexistente");
+		console.log("\n\nUsage:");
+		console.log("\n\tsearch <option>\n\t\tSearch in the blockchain logs according to <option>, it is based\n\t\ton timestamp, creator, ip or public key.");
+		console.log("\n\texit\tExit the program.");
+		console.log("\n\thelp\tShow this information.");
+
+		
 	}
   });
 
