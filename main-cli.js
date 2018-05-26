@@ -731,6 +731,28 @@ function validaIp(ip){
 	return /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ip);
 }
 
+
+function printBlockUser(results){
+	var i;
+
+	var date;
+	console.log("");
+	for (i = 0; i < results.length; i++) {
+		date = new Date(results[i]["timestamp"]).toLocaleString('pt-BR');
+		console.log("-----------------");
+		console.log("Result #: "+i);
+		console.log("Creator: "+results[i]["creator"]);
+		console.log("Creation date: "+date);
+		console.log("Data: "+results[i]["data"]);
+		console.log("IP: "+results[i]["ip"]);
+		console.log("-----------------\n");
+	}
+
+	console.log
+}
+
+
+
 function pesquisaLogData(timestampStart, timestampEnd){
 	console.log("Follow the result of your search by timestamp");
 
@@ -748,7 +770,7 @@ function pesquisaLogData(timestampStart, timestampEnd){
 			console.log("No result found");
 
 		} else 
-			console.log(result);
+			printBlockUser(result);
 	});
 
 }
@@ -776,7 +798,7 @@ function pesquisaLogPK(pathPK){
 							console.log("No result found");
 
 						}else 
-							console.log(result);
+							printBlockUser(result);
 					});
 
 				} else{
@@ -808,7 +830,7 @@ function pesquisaLogCriador(creator){
 			console.log("No result found");
 
 		}else 
-			console.log(result);
+			printBlockUser(result);
 	});
 }
 
@@ -828,7 +850,7 @@ function pesquisaLogIp(ip){
 			console.log("No result found");
 
 		}else 
-			console.log(result);
+			printBlockUser(result);
 	});
 }
 
@@ -848,9 +870,10 @@ stdin.addListener("data", function(d) {
 	var opt = d.toString().trim();
 	var x = opt.split(' ');
 
-	if (x[0] != "search") {
-		console.log("Comando inexistente");
-	} else {
+	if (x[0] == "exit") {
+		process.exit(1);
+	} else if (x[0] == "search") {
+
 		switch (x[1]) {
 			case '--timestamp':
 			case '-t':
@@ -929,6 +952,8 @@ stdin.addListener("data", function(d) {
 				console.log("\t-t, --timestamp <timestamp start> [<timestamp end>]\n\n\t\t\tIf <timestamp start> and <timestamp end> are defined, the command\n\t\t\treturns all the logs between both dates. If only <timestamp start>\n\t\t\tis defined, the command returns all the logs of the day.\n\n\t\t\tThe timestamp needs to be in the following format:\n\t\t\tdd/mm/yyyy");
 
 		}
+	} else if (x[0] != "search") {
+		console.log("Comando inexistente");
 	}
   });
 
