@@ -246,21 +246,29 @@ class Blockchain {
 		return new Block(0, "0", 1465154705000, "genesis", "816534932c2b7154836da6afc367695e6337db8a921823784c14378abed4f7d7", "Blockchain Services", programPub, signature, "0.0.0.0");
 	}
 
-	addBlock(blockData){
+	addBlock(blockData, type){
 
-		let newBlock = this.generateNextBlock(blockData);
+		let newBlock = this.generateNextBlock(blockData, type);
 
 		if (this.isValidNewBlock(newBlock, this.latestBlock)) {
 			this.pushBlock(newBlock);
 		}
 	}
 
-	generateNextBlock(blockData){
-		let nextIndex = this.latestBlock.index + 1;
-		let nextTimestamp = new Date().getTime();
-		let signature = security.signature(blockData, 0);
-		let nextHash = this.calculateHash(nextIndex, this.latestBlock.hash, nextTimestamp, blockData, security.publicKeyExtracted.commonName, security.publicKey, signature, ipAddress.address());
-		return new Block(nextIndex, this.latestBlock.hash, nextTimestamp, blockData, nextHash, security.publicKeyExtracted.commonName, security.publicKey, signature, ipAddress.address());
+	generateNextBlock(blockData, type){
+		if(type == 0){
+			let nextIndex = this.latestBlock.index + 1;
+			let nextTimestamp = new Date().getTime();
+			let signature = security.signature(blockData, 0);
+			let nextHash = this.calculateHash(nextIndex, this.latestBlock.hash, nextTimestamp, blockData, security.publicKeyExtracted.commonName, security.publicKey, signature, ipAddress.address());
+			return new Block(nextIndex, this.latestBlock.hash, nextTimestamp, blockData, nextHash, security.publicKeyExtracted.commonName, security.publicKey, signature, ipAddress.address());
+		} else {
+			let nextIndex = this.latestBlock.index + 1;
+			let nextTimestamp = new Date().getTime();
+			let signature = security.signature(blockData, 1);
+			let nextHash = this.calculateHash(nextIndex, this.latestBlock.hash, nextTimestamp, blockData, "Blockchain Services", programPub, signature, ipAddress.address());
+			return new Block(nextIndex, this.latestBlock.hash, nextTimestamp, blockData, nextHash, "Blockchain Services", programPub, signature, ipAddress.address());
+		}
 	};
 
 	calculateHash(index, previousHash, timestamp, data, creator, publicKey, signature, ip){
@@ -663,7 +671,7 @@ var initHttpServer = () => {
 	});
 
 	app.post('/mineBlock', (req, res) => {
-		blockchain.addBlock(req.body.data);
+		blockchain.addBlock(req.body.data, 0);
 		
 		res.send();
 	});
@@ -735,10 +743,11 @@ function pesquisaLogData(timestampStart, timestampEnd){
 				result.push(blocks[i]);
 			}
 		}
+
 		if(result.length < 1){	
 			console.log("No result found");
 
-		}else 
+		} else 
 			console.log(result);
 	});
 
@@ -859,6 +868,8 @@ stdin.addListener("data", function(d) {
 						composedDateEnd = validaData(x[3]);
 						if(!composedDateEnd) break;
 					}
+					let log ="The client ran a log reading: "+opt;
+					blockchain.addBlock(log, 1);
 					// Onde pesquisaLogData() retorna Log com a data correspondente;
 					pesquisaLogData(composedDateStart.getTime(), composedDateEnd.getTime());
 				} else {
@@ -871,7 +882,8 @@ stdin.addListener("data", function(d) {
 				var caminho = x[2];
 				// Onde validaCaminho() retorna True se o "caminho" da PK estiver correto; 	
 				if (validaCaminho(caminho)) {
-
+					let log ="The client ran a log reading: "+opt;
+					blockchain.addBlock(log, 1);
 					// Onde pesquisaLogPK() retorna Log com a PK correpondente;
 					pesquisaLogPK(caminho);
 				} else {
@@ -889,6 +901,8 @@ stdin.addListener("data", function(d) {
 				// Onde validaCriador() retorna True se o "criador" estiver correto;
 				if (validaCriador(criador)) {
 					// Onde pesquisaLogPK() retorna Log do "criador" correspondente;
+					let log ="The client ran a log reading: "+opt;
+					blockchain.addBlock(log, 1);
 					pesquisaLogCriador(criador);
 				} else {
 					console.log("Criador incorreto");
@@ -900,6 +914,8 @@ stdin.addListener("data", function(d) {
 				// Onde validaIp() retorna True se o "ip" estiver correto;
 				if (validaIp(ip)) {
 					// Onde pesquisaLogIp() retorna Log do "Ip" correspondente;
+					let log ="The client ran a log reading: "+opt;
+					blockchain.addBlock(log, 1);
 					pesquisaLogIp(ip);
 				} else {
 					console.log("Ip incorreto");
