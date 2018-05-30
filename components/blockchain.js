@@ -28,7 +28,6 @@ class Blockchain {
 				if(!this.isValidChain(value)){
 					this.deleteOldFiles().then(
 						value => {
-							console.log("das");
 							this.pushBlock(this.getGenesisBlock());
 						},
 						error => {
@@ -67,7 +66,6 @@ class Blockchain {
 	}
 
 	addBlock(blockData, file, type, connection){
-
 		let newBlock = this.generateNextBlock(blockData, file, type);
 
 		if (this.isValidNewBlock(newBlock, this.latestBlock)) {
@@ -76,6 +74,7 @@ class Blockchain {
 					connection.broadcast(connection.responseLatestMsg());
 				},
 				error => {
+					console.log(error);
 					console.log("erro");
 				}
 			);
@@ -157,44 +156,44 @@ class Blockchain {
 	}
 
 	pushBlock(block){
-		let self = this;
-		return new Promise(function(resolve, reject) {
-			if(!self._security.verifySignature(block.data, block.signature, block.publicKey)){
-				
-				self.getAllBlocks().then(
-					value => {
-						if(value){
-							value.push(block);
-						} else {
-							value = [block];
-						}
-
-						value = self._security.encryptSymmetric(JSON.stringify(value));
-
-						self._fs.writeFile('./data/data.txt', value, function (err) {
-							if (err) {
-								console.log("erro de escrita");
+		
+			let self = this;
+			
+			return new Promise(function(resolve, reject) {
+				if(!self._security.verifySignature(block.data, block.signature, block.publicKey)){
+					self.getAllBlocks().then(
+						value => {
+							if(value){
+								value.push(block);
+							} else {
+								value = [block];
 							}
-						});
 
-						console.log('block added: ' + JSON.stringify(block.data));
+							value = self._security.encryptSymmetric(JSON.stringify(value));
 
-						self.latestBlock = block;
-						resolve();
+							self._fs.writeFile('./data/data.txt', value, function (err) {
+								if (err) {
+									console.log("erro de escrita");
+								}
+							});
 
-						//connection.broadcast(connection.responseLatestMsg());
+							console.log('block added: ' + JSON.stringify(block.data));
+							self.latestBlock = block;
+							resolve();
 
-					}, error => {
-						// console.log("get all blocks");
-						// console.log(error);
-						reject();
-					}
-				)
-			} else {
-				console.log("the signature not match with publicKey");
-				reject();
-			}
-		});
+							//connection.broadcast(connection.responseLatestMsg());
+
+						}, error => {
+							// console.log("get all blocks");
+							// console.log(error);
+							reject();
+						}
+					)
+				} else {
+					console.log("the signature not match with publicKey");
+					reject();
+				}
+			});
 	}
 
 	tryReplaceChain(newBlocks){

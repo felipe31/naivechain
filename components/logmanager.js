@@ -6,7 +6,7 @@ class logManager {
 		this._blockchain = blockchain;
 		this._connection = connection;
 
-		var options= {separator: /[\r]{0,1}\n/, fromBeginning: false, follow: true}
+		var options= {separator: "", fromBeginning: false, follow: true}
 		var logFiles;
 		
 		try {
@@ -24,9 +24,10 @@ class logManager {
 				let file = logFiles[i];
 				let tl = new Tail(file, options);
 				tl.on("line", function(data){
-					console.log('Log Created! Block being created...');
+					
 					if(data != ""){
-						self._blockchain.addBlock(data,file, 1, self._connection);
+						console.log('Log Created! Block being created...'+data);
+						self._blockchain.addBlock(data,file, 0, self._connection);
 					}
 				})
 			}

@@ -164,7 +164,9 @@ vT6KDq1GrZOCtsO21HxjIkVApx9cQ/7lkNjkMxXUFTn8WpTrnILT\n\
 		encryptKeys: encryptKeys,
 		decryptKeys: decryptKeys,
 		programPub:programPub,
-		hash:hash
+		publicKeyExtracted:publicKeyExtracted,
+		hash:hash, 
+		publicKey:publicKey
 
     };
 }
