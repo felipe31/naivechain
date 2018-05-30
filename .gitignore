@@ -1,6 +1,6 @@
 node_modules
 npm-debug.log
 .idea
-
 data/*
 keys/*
+.DS_Store
