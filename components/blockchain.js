@@ -23,12 +23,17 @@ class Blockchain {
 		this._fs = fs;
 		this._ip = ip;
 		this._security = security;
+		this.blocksToAdd = [];
+		this._connection = null;
+		this.lock = 0;
+
 		this.getAllBlocks().then(
 			value => {
 				if(!this.isValidChain(value)){
 					this.deleteOldFiles().then(
 						value => {
-							this.pushBlock(this.getGenesisBlock());
+							this.blockToQueue(this.getGenesisBlock());
+							//this.pushBlock();
 						},
 						error => {
 							console.log(error); // Error!
@@ -41,7 +46,15 @@ class Blockchain {
 			}
 		);
 	}
-	
+
+	setConnection(connection){
+		this._connection = connection;
+	}
+
+	blockToQueue(block){
+		this.blocksToAdd.push(block);
+		this.pushBlock();
+	}
 	
 	deleteOldFiles(){
 		let self = this;
@@ -65,19 +78,11 @@ class Blockchain {
 		return new Block(0, "0", 1465154705000, "genesis", "816534932c2b7154836da6afc367695e6337db8a921823784c14378abed4f7d7", "Blockchain Services", this._security.programPub, signature, "0.0.0.0", "");
 	}
 
-	addBlock(blockData, file, type, connection){
+	addBlock(blockData, file, type){
 		let newBlock = this.generateNextBlock(blockData, file, type);
 
-		if (this.isValidNewBlock(newBlock, this.latestBlock)) {
-			this.pushBlock(newBlock).then(
-				value => {
-					connection.broadcast(connection.responseLatestMsg());
-				},
-				error => {
-					console.log(error);
-					console.log("erro");
-				}
-			);
+		if(this.isValidNewBlock(newBlock, this.latestBlock)){
+			this.blockToQueue(newBlock);
 		}
 	}
 
@@ -155,45 +160,58 @@ class Blockchain {
 		});
 	}
 
-	pushBlock(block){
-		
+	pushBlock(){
+
+		if(this.lock == 0 && this.blocksToAdd.length != 0){
+			this.lock = 1;
+
 			let self = this;
-			
-			return new Promise(function(resolve, reject) {
-				if(!self._security.verifySignature(block.data, block.signature, block.publicKey)){
-					self.getAllBlocks().then(
-						value => {
-							if(value){
-								value.push(block);
-							} else {
-								value = [block];
-							}
+			let blocks = this.blocksToAdd;
+			this.blocksToAdd = [];
 
-							value = self._security.encryptSymmetric(JSON.stringify(value));
-
-							self._fs.writeFile('./data/data.txt', value, function (err) {
-								if (err) {
-									console.log("erro de escrita");
-								}
-							});
-
-							console.log('block added: ' + JSON.stringify(block.data));
-							self.latestBlock = block;
-							resolve();
-
-							//connection.broadcast(connection.responseLatestMsg());
-
-						}, error => {
-							// console.log("get all blocks");
-							// console.log(error);
-							reject();
-						}
-					)
-				} else {
-					console.log("the signature not match with publicKey");
-					reject();
+			for (var i = blocks.length - 1; i >= 0; i--) {
+				
+				if(self._security.verifySignature(blocks[i].data, blocks[i].signature, blocks[i].publicKey)){
+					blocks.splice(i, 1);
+					console.log("Some block signature not match with publicKey");
 				}
-			});
+			}
+
+			self.getAllBlocks().then(
+				value => {
+					if(value){
+						//value.concat(blocks);
+						value.push.apply(value, blocks)
+					} else {
+						value = blocks;
+					}
+
+					value = self._security.encryptSymmetric(JSON.stringify(value));
+
+					self._fs.writeFile('./data/data.txt', value, function (err) {
+						if (err) {
+							console.log("erro de escrita");
+						}
+					});
+					
+
+					console.log('block added');
+
+					self.latestBlock = blocks[(blocks.length-1)];
+					self._connection.broadcast(self._connection.responseLatestMsg());
+					
+					self.lock = 0;
+					self.pushBlock();
+
+				}, error => {
+					// console.log("get all blocks");
+					// console.log(error);
+				}
+			)
+
+			
+			
+		}
 	}
 
 	tryReplaceChain(newBlocks){

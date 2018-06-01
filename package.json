@@ -19,9 +19,11 @@
 	"keywords": [],
 	"dependencies": {
 		"express": "^4.16.3",
+		"file-tail": "^0.3.0",
 		"ip": "^1.1.5",
 		"socket.io": "^2.1.1",
 		"socket.io-client": "^2.1.1",
+		"tail": "^1.2.3",
 		"x509": "^0.3.3"
 	}
 }

@@ -4,9 +4,8 @@ var stdin = process.openStdin();
 
 class Service {
 
-	constructor(blockchain, connection) {
+	constructor(blockchain) {
 		this._blockchain = blockchain;
-		this._connection = connection;
 
 		let self = this;
 		stdin.addListener("data", function(d) {
@@ -36,7 +35,7 @@ class Service {
 								if(!composedDateEnd) break;
 							}
 							let log ="The client ran a log reading: "+opt;
-							self._blockchain.addBlock(log,'', 1, self._connection);
+							self._blockchain.addBlock(log,'', 1);
 							// Onde pesquisaLogData() retorna Log com a data correspondente;
 							self.pesquisaLogData(composedDateStart.getTime(), composedDateEnd.getTime());
 						} else {
@@ -50,7 +49,7 @@ class Service {
 						// Onde validaCaminho() retorna True se o "caminho" da PK estiver correto; 	
 						if (self.validaCaminho(caminho)) {
 							let log ="The client ran a log reading: "+opt;
-							self._blockchain.addBlock(log,'', 1, self._connection);
+							self._blockchain.addBlock(log,'', 1);
 							// Onde pesquisaLogPK() retorna Log com a PK correpondente;
 							self.pesquisaLogPK(caminho);
 						} else {
@@ -69,7 +68,7 @@ class Service {
 						if (self.validaCriador(criador)) {
 							// Onde pesquisaLogPK() retorna Log do "criador" correspondente;
 							let log ="The client ran a log reading: "+opt;
-							self._blockchain.addBlock(log,'', 1, self._connection);
+							self._blockchain.addBlock(log,'', 1);
 							self.pesquisaLogCriador(criador);
 						} else {
 							console.log("Criador incorreto");
@@ -83,7 +82,7 @@ class Service {
 						if (self.validaIp(ip)) {
 							// Onde pesquisaLogIp() retorna Log do "Ip" correspondente;
 							let log ="The client ran a log reading: "+opt;
-							self._blockchain.addBlock(log,'', 1, self._connection);
+							self._blockchain.addBlock(log,'', 1);
 							self.pesquisaLogIp(ip);
 						} else {
 							console.log("Ip incorreto");

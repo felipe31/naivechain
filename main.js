@@ -21,12 +21,13 @@ var bc = new Blockchain(path, fs, ip, security);
 var Connection = require('./components/connection.js');
 var cn = new Connection(io, ioClient, ip, http, security, bc);
 
+bc.setConnection(cn);
+
 var Service = require('./components/service.js');
-var sv = new Service(bc, cn);
+var sv = new Service(bc);
 
 var logManager = require('./components/logmanager.js');
-var lm = new logManager(fs, tail, bc, cn);
-
+var lm = new logManager(fs, tail, bc);
 
 
 //---------------------------------------------------

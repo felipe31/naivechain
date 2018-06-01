@@ -2,11 +2,10 @@
 
 class logManager {
 
-	constructor(fs, Tail, blockchain, connection) {
+	constructor(fs, Tail, blockchain) {
 		this._blockchain = blockchain;
-		this._connection = connection;
 
-		var options= {separator: "", fromBeginning: false, follow: true}
+		var options= {separator: /[\r]{0,1}\n/, fromBeginning: false, follow: true}
 		var logFiles;
 		
 		try {
@@ -27,7 +26,7 @@ class logManager {
 					
 					if(data != ""){
 						console.log('Log Created! Block being created...'+data);
-						self._blockchain.addBlock(data,file, 0, self._connection);
+						self._blockchain.addBlock(data,file, 0);
 					}
 				})
 			}
