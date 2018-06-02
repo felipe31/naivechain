@@ -87,6 +87,7 @@ vT6KDq1GrZOCtsO21HxjIkVApx9cQ/7lkNjkMxXUFTn8WpTrnILT\n\
 		signer.update(data);
 		signer.end();
 		let signature = signer.sign(priv);
+
 		return signature.toString('hex');
 	}
 

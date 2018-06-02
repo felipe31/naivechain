@@ -229,14 +229,8 @@ class Connection {
 				// VERIFICAR
 				//------------------------------------------------------ 
 
-				this._blockchain.pushBlock(latestBlockReceived).then(
-					value => {
-						this.broadcast(this.responseLatestMsg());
-					},
-					error => {
-						console.log("erro");
-					}
-				);
+				this._blockchain.blockToQueue(latestBlockReceived);
+				
 			} else if (receivedBlocks.length === 1) {
 				console.log("We have to query the chain from our peer");
 				this.broadcast(this.queryAllMsg());
