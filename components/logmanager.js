@@ -5,7 +5,7 @@ class logManager {
 	constructor(fs, Tail, blockchain) {
 		this._blockchain = blockchain;
 
-		var options= {separator: /[\r]{0,1}\n/, fromBeginning: false, follow: true}
+		var options= {separator: /([^/]*)$/, fromBeginning: false, follow: true}
 		var logFiles;
 		
 		try {

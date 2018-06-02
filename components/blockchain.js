@@ -26,14 +26,14 @@ class Blockchain {
 		this.blocksToAdd = [];
 		this._connection = null;
 		this.lock = 0;
+		this.idx = 0;
 
 		this.getAllBlocks().then(
 			value => {
 				if(!this.isValidChain(value)){
 					this.deleteOldFiles().then(
 						value => {
-							this.blockToQueue(this.getGenesisBlock());
-							//this.pushBlock();
+							this.startChain();
 						},
 						error => {
 							console.log(error); // Error!
@@ -42,6 +42,7 @@ class Blockchain {
 					);
 				} else {
 					this.latestBlock = value[value.length-1];
+					this.idx = this.latestBlock.index;
 				}
 			}
 		);
@@ -49,6 +50,28 @@ class Blockchain {
 
 	setConnection(connection){
 		this._connection = connection;
+	}
+
+	startChain(){
+		let self = this;
+
+		self.getAllBlocks().then(
+			value => {
+				let genesis = self.getGenesisBlock();
+				value = [genesis];
+
+				value = self._security.encryptSymmetric(JSON.stringify(value));
+
+				self._fs.writeFile('./data/data.txt', value, function (err) {
+					if (err) {
+						console.log("erro de escrita");
+					}
+				});
+				console.log('genesis add');
+
+				self.latestBlock = genesis;
+			}
+		)
 	}
 
 	blockToQueue(block){
@@ -79,29 +102,27 @@ class Blockchain {
 	}
 
 	addBlock(blockData, file, type){
-		let newBlock = this.generateNextBlock(blockData, file, type);
-
-		if(this.isValidNewBlock(newBlock, this.latestBlock)){
-			this.blockToQueue(newBlock);
-		}
+		
+		this.blockToQueue({data: blockData, file: file, type: type});
 	}
 
-	generateNextBlock(blockData, file, type){
+	generateNextBlock(blockData, file, type, latestBlock){
+		this.idx++;
+
+		let nextIndex = this.idx;
+		let nextTimestamp = new Date().getTime();
+
 		if(type == 0){
-			let nextIndex = this.latestBlock.index + 1;
-			let nextTimestamp = new Date().getTime();
 			let signature = this._security.signature(blockData, 0);
-			let nextHash = this.calculateHash(nextIndex, this.latestBlock.hash, nextTimestamp, blockData, this._security.publicKeyExtracted.commonName, this._security.publicKey, signature, this._ip.address(), file);
-			return new Block(nextIndex, this.latestBlock.hash, nextTimestamp, blockData, nextHash, this._security.publicKeyExtracted.commonName, this._security.publicKey, signature, this._ip.address(), file);
+			let nextHash = this.calculateHash(nextIndex, latestBlock.hash, nextTimestamp, blockData, this._security.publicKeyExtracted.commonName, this._security.publicKey, signature, this._ip.address(), file);
+			return new Block(nextIndex, latestBlock.hash, nextTimestamp, blockData, nextHash, this._security.publicKeyExtracted.commonName, this._security.publicKey, signature, this._ip.address(), file);
 		} else {
-			let nextIndex = this.latestBlock.index + 1;
-			let nextTimestamp = new Date().getTime();
 			let signature = this._security.signature(blockData, 1);
-			let nextHash = this.calculateHash(nextIndex, this.latestBlock.hash, nextTimestamp, blockData, "Blockchain Services", this._security.programPub, signature, this._ip.address(), file);
-			return new Block(nextIndex, this.latestBlock.hash, nextTimestamp, blockData, nextHash, "Blockchain Services", this._security.programPub, signature, this._ip.address(), file);
+			let nextHash = this.calculateHash(nextIndex, latestBlock.hash, nextTimestamp, blockData, "Blockchain Services", this._security.programPub, signature, this._ip.address(), file);
+			return new Block(nextIndex, latestBlock.hash, nextTimestamp, blockData, nextHash, "Blockchain Services", this._security.programPub, signature, this._ip.address(), file);
 		}
 	};
-
+	
 	calculateHash(index, previousHash, timestamp, data, creator, publicKey, signature, ip, file){
 		return this._security.hash(index + previousHash + timestamp + data + creator + publicKey + signature + ip + file);
 	};
@@ -164,53 +185,62 @@ class Blockchain {
 
 		if(this.lock == 0 && this.blocksToAdd.length != 0){
 			this.lock = 1;
-
+			let last = this.latestBlock;
 			let self = this;
 			let blocks = this.blocksToAdd;
+			console.log(blocks);
 			this.blocksToAdd = [];
 
-			for (var i = blocks.length - 1; i >= 0; i--) {
-				
-				if(self._security.verifySignature(blocks[i].data, blocks[i].signature, blocks[i].publicKey)){
-					blocks.splice(i, 1);
-					console.log("Some block signature not match with publicKey");
+			let addblocks = [];
+
+			for (var i = 0; i < blocks.length; i++) {
+
+				let block = self.generateNextBlock(blocks[i].data, blocks[i].file, blocks[i].type, last);
+
+				console.log(block);
+
+				if(self.isValidNewBlock(block, last)){
+					addblocks.push(block);
+					last = block;
+				} else {
+					self.idx--;
 				}
 			}
 
-			self.getAllBlocks().then(
-				value => {
-					if(value){
-						//value.concat(blocks);
-						value.push.apply(value, blocks)
-					} else {
-						value = blocks;
-					}
-
-					value = self._security.encryptSymmetric(JSON.stringify(value));
-
-					self._fs.writeFile('./data/data.txt', value, function (err) {
-						if (err) {
-							console.log("erro de escrita");
+			
+			if(addblocks.length != 0){
+				self.getAllBlocks().then(
+					value => {
+						if(value){
+							//value.concat(blocks);
+							value.push.apply(value, addblocks)
+						} else {
+							value = addblocks;
 						}
-					});
-					
 
-					console.log('block added');
+						value = self._security.encryptSymmetric(JSON.stringify(value));
 
-					self.latestBlock = blocks[(blocks.length-1)];
-					self._connection.broadcast(self._connection.responseLatestMsg());
-					
-					self.lock = 0;
-					self.pushBlock();
+						self._fs.writeFile('./data/data.txt', value, function (err) {
+							if (err) {
+								console.log("erro de escrita");
+							}
+						});
+						
 
-				}, error => {
-					// console.log("get all blocks");
-					// console.log(error);
-				}
-			)
+						console.log('block added');
 
-			
-			
+						self.latestBlock = addblocks[(addblocks.length-1)];
+						self._connection.broadcast(self._connection.responseLatestMsg());
+						
+						self.lock = 0;
+						self.pushBlock();
+
+					}, error => {
+						// console.log("get all blocks");
+						// console.log(error);
+					}
+				)
+			}
 		}
 	}
 
