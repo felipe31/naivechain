@@ -242,9 +242,11 @@ class Connection {
 				this.broadcast(this.queryAllMsg());
 			} else {
 				console.log("Received blockchain is longer than current blockchain");
-				if(this._blockchain.tryReplaceChain(receivedBlocks)){
-					this.broadcast(this.responseLatestMsg());	
-				};
+				this._blockchain.tryReplaceChain(receivedBlocks).then(
+					value => {
+						this.broadcast(this.responseLatestMsg());	
+					}
+				);
 			}
 		} else {
 			console.log('received blockchain is not longer than current blockchain. Do nothing');

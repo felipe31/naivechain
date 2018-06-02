@@ -87,9 +87,7 @@ vT6KDq1GrZOCtsO21HxjIkVApx9cQ/7lkNjkMxXUFTn8WpTrnILT\n\
 		signer.update(data);
 		signer.end();
 		let signature = signer.sign(priv);
-		let signature_hex = signature.toString('hex');
-
-		return signature_hex;
+		return signature.toString('hex');
 	}
 
 	function extractPublicKey(pubKey){
@@ -101,12 +99,12 @@ vT6KDq1GrZOCtsO21HxjIkVApx9cQ/7lkNjkMxXUFTn8WpTrnILT\n\
 	}
 
 	function verifySignature(data, signature, pubKey){
+		signature = new Buffer(signature, 'hex');
 		let verifier = crypto.createVerify('RSA-SHA256');
 		verifier.update(data);
 		verifier.end();
 
 		let verified = verifier.verify(pubKey, signature);
-
 		return verified;
 	}
 

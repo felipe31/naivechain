@@ -1,4 +1,4 @@
-'use strict';
+	'use strict';
 
 class Block {
 	constructor(index, previousHash, timestamp, data, hash, creator, publicKey, signature, ip, file) {
@@ -12,6 +12,7 @@ class Block {
 		this.signature = signature;
 		this.ip = ip;
 		this.file = file;
+		this.nextHash = null;
 	}
 }
 
@@ -25,19 +26,22 @@ class Blockchain {
 		this._security = security;
 		this.getAllBlocks().then(
 			value => {
-				if(!this.isValidChain(value)){
-					this.deleteOldFiles().then(
-						value => {
-							this.pushBlock(this.getGenesisBlock());
-						},
-						error => {
-							console.log(error); // Error!
-							console.log("erro excluir arquivos");
-						}
-					);
-				} else {
-					this.latestBlock = value[value.length-1];
-				}
+
+				this.isValidChain(value).then(
+					value_empty => {
+						this.latestBlock = value[value.length-1];
+					},
+					error_empty => {
+						this.deleteOldFiles().then(
+							value => {
+								this.pushBlock(this.getGenesisBlock());
+							},
+							error => {
+								console.log(error); // Error!
+								console.log("erro excluir arquivos");
+							}
+						);
+					});
 			}
 		);
 	}
@@ -68,57 +72,88 @@ class Blockchain {
 	addBlock(blockData, file, type, connection){
 		let newBlock = this.generateNextBlock(blockData, file, type);
 
-		if (this.isValidNewBlock(newBlock, this.latestBlock)) {
-			this.pushBlock(newBlock).then(
+		let self = this;
+
+		return new Promise(function(resolve,reject){
+
+			self.isValidNewBlock(newBlock, self.latestBlock).then(
 				value => {
-					connection.broadcast(connection.responseLatestMsg());
-				},
-				error => {
-					console.log(error);
-					console.log("erro");
+					self.pushBlock(newBlock).then(
+						value => {
+							connection.broadcast(connection.responseLatestMsg());
+						},
+						error => {
+							console.log(error);
+							console.log("erro");
+						}
+					);
 				}
 			);
-		}
+		});
 	}
+
 
 	generateNextBlock(blockData, file, type){
 		if(type == 0){
+			console.log(this.latestBlock);
 			let nextIndex = this.latestBlock.index + 1;
 			let nextTimestamp = new Date().getTime();
 			let signature = this._security.signature(blockData, 0);
-			let nextHash = this.calculateHash(nextIndex, this.latestBlock.hash, nextTimestamp, blockData, this._security.publicKeyExtracted.commonName, this._security.publicKey, signature, this._ip.address(), file);
+			let nextHash = this.calculateHash(nextIndex, nextTimestamp, blockData, this._security.publicKeyExtracted.commonName, this._security.publicKey, signature, this._ip.address(), file);
+
+			this.latestBlock.nextHash = nextHash;
+
 			return new Block(nextIndex, this.latestBlock.hash, nextTimestamp, blockData, nextHash, this._security.publicKeyExtracted.commonName, this._security.publicKey, signature, this._ip.address(), file);
 		} else {
 			let nextIndex = this.latestBlock.index + 1;
 			let nextTimestamp = new Date().getTime();
 			let signature = this._security.signature(blockData, 1);
-			let nextHash = this.calculateHash(nextIndex, this.latestBlock.hash, nextTimestamp, blockData, "Blockchain Services", this._security.programPub, signature, this._ip.address(), file);
+			let nextHash = this.calculateHash(nextIndex, nextTimestamp, blockData, "Blockchain Services", this._security.programPub, signature, this._ip.address(), file);
 			return new Block(nextIndex, this.latestBlock.hash, nextTimestamp, blockData, nextHash, "Blockchain Services", this._security.programPub, signature, this._ip.address(), file);
 		}
 	};
 
-	calculateHash(index, previousHash, timestamp, data, creator, publicKey, signature, ip, file){
-		return this._security.hash(index + previousHash + timestamp + data + creator + publicKey + signature + ip + file);
+	calculateHash(index, timestamp, data, creator, publicKey, signature, ip, file){
+		return this._security.hash(index + timestamp + data + creator + publicKey + signature + ip + file);
 	};
 
 	calculateHashForBlock(block){
-		return this.calculateHash(block.index, block.previousHash, block.timestamp, block.data, block.creator, block.publicKey, block.signature, block.ip, block.file);
+		return this.calculateHash(block.index, block.timestamp, block.data, block.creator, block.publicKey, block.signature, block.ip, block.file);
 	};
 
 	isValidNewBlock (newBlock, previousBlock){
-		if (previousBlock.index + 1 !== newBlock.index) {
-			console.log('invalid index');
-			return false;
-		} else if (previousBlock.hash !== newBlock.previousHash) {
-			console.log('invalid previoushash');
-			return false;
-		} else if (this.calculateHashForBlock(newBlock) !== newBlock.hash) {
-			console.log(typeof (newBlock.hash) + ' ' + typeof this.calculateHashForBlock(newBlock));
-			console.log('invalid hash: ' + this.calculateHashForBlock(newBlock) + ' ' + newBlock.hash);
-			return false;
-		}
+		let self = this;
 
-		return true;
+		return new Promise(function(resolve, reject) {
+
+			if (previousBlock.index + 1 !== newBlock.index) {
+				console.log('invalid index');
+				reject();
+			} else if (previousBlock.hash !== newBlock.previousHash) {
+				console.log('invalid previoushash');
+				reject();
+			} else if (self.calculateHashForBlock(newBlock) !== newBlock.hash) {
+				console.log(typeof (newBlock.hash) + ' ' + typeof self.calculateHashForBlock(newBlock));
+				console.log('invalid hash: ' + self.calculateHashForBlock(newBlock) + ' ' + newBlock.hash);
+				reject();
+			} else if (previousBlock.nextHash !== newBlock.hash) {
+				console.log('invalid previoushash.nextHash');
+				reject();
+			} else if(!self._security.verifySignature(newBlock.data, newBlock.signature, newBlock.publicKey)){
+				console.log('invalid signature');
+				reject();
+			} else{
+				self.getAllBlocks().then(
+					value => {
+						// Verify if the position of the newBlock is already taken
+						if (value[self.calculateHashForBlock(newBlock)] !== undefined) {
+							console.log('hash position already in use!');
+							reject();
+						}
+				});
+			}
+			return true;
+		});
 	};
 
 	getAllBlocks(){
@@ -160,14 +195,27 @@ class Blockchain {
 			let self = this;
 			
 			return new Promise(function(resolve, reject) {
-				if(!self._security.verifySignature(block.data, block.signature, block.publicKey)){
+				if(self._security.verifySignature(block.data, block.signature, block.publicKey)){
 					self.getAllBlocks().then(
 						value => {
+							console.log("------------------------------");
+							console.log("------------------------------");
+							console.log("------------------------------");
+							console.log("------------------------------");
+							console.log(typeof(value));
+							console.log(value);
+							console.log("------------------------------");
+							console.log("------------------------------");
+							console.log("------------------------------");
+							console.log("------------------------------");
+
+							let hashCurrentBlock = self.calculateHashForBlock(block);
 							if(value){
-								value.push(block);
-							} else {
-								value = [block];
-							}
+								self.latestBlock.nextHash = hashCurrentBlock;
+								block.previousHash = self.calculateHashForBlock(latestBlock);
+							} else value = [];
+
+							value[hashCurrentBlock] = block;
 
 							value = self._security.encryptSymmetric(JSON.stringify(value));
 
@@ -188,7 +236,7 @@ class Blockchain {
 							// console.log(error);
 							reject();
 						}
-					)
+					);
 				} else {
 					console.log("the signature not match with publicKey");
 					reject();
@@ -197,32 +245,49 @@ class Blockchain {
 	}
 
 	tryReplaceChain(newBlocks){
-		if (this.isValidChain(newBlocks) && newBlocks.length > this.latestBlock.index) {
-			console.log('Received blockchain is valid. Replacing current blockchain with received blockchain');
+		let self = this;
 
-			this.replace(newBlocks);
-			return true;
-		} else {
-			console.log('Received blockchain invalid');
-			return false;
-		}
+		return new Promise(function(resolve, reject) {
+			self.isValidChain(newBlocks).then(
+				value => {
+					if (newBlocks.length > self.latestBlock.index) {
+						console.log('Received blockchain is valid. Replacing current blockchain with received blockchain');
+
+						self.replace(newBlocks);
+						resolve();
+					} else {
+						console.log('Received blockchain invalid');
+						reject();
+					}
+			});
+		});
 	};
 
 	isValidChain(blockchainToValidate){
-		
-		if (JSON.stringify(blockchainToValidate[0]) !== JSON.stringify(this.getGenesisBlock())) {
-			return false;
-		}
-		var tempBlocks = [blockchainToValidate[0]];
-		for (var i = 1; i < blockchainToValidate.length; i++) {
-			if (this.isValidNewBlock(blockchainToValidate[i], tempBlocks[i - 1])) {
-				tempBlocks.push(blockchainToValidate[i]);
-			} else {
-				return false;
+		let self = this;
+
+		return new Promise(function(resolve, reject) {
+			
+			var hashCurrentBlock = self.calculateHashForBlock(self.getGenesisBlock());
+			if (JSON.stringify(blockchainToValidate[hashCurrentBlock]) !== JSON.stringify(self.getGenesisBlock())) {
+				reject();
 			}
-		}
-		return true;
-	};
+			var tempBlocks = [blockchainToValidate[hashCurrentBlock]];
+			for (var i = 1; i < blockchainToValidate.length; i++) {
+				hashCurrentBlock = blockchainToValidate[hashCurrentBlock].nextHash;
+				if (blockchainToValidate[hashCurrentBlock]) {
+					
+					self.isValidNewBlock(blockchainToValidate[hashCurrentBlock], tempBlocks[i - 1]).then(
+					value => {
+						tempBlocks.push(blockchainToValidate[hashCurrentBlock]);
+					}, error => {
+						reject();
+					});
+				}
+			}
+			resolve();
+		});
+	}
 };
 
 module.exports = Blockchain;
