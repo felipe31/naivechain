@@ -11,8 +11,10 @@ class Service {
 		let self = this;
 		stdin.addListener("data", function(d) {
 
+			self.comparaLog("./logs/test.txt");
 			var opt = d.toString().trim();
 			var x = opt.split(' ');
+<<<<<<< HEAD
 
 			switch (x[0]) {
 				case "exit":
@@ -27,6 +29,35 @@ class Service {
 								console.log("The logs were verified with the blockchain");
 							} else {
 								console.log("The logs in blockchain do NOT correspond with the local logs");
+=======
+			if (x[0] == "exit") {
+				process.exit(1);
+			} else if (x[0] == "connect") {
+				var ip = x[1];
+				if (self.validaIp(ip)) {
+					console.log("Starting connection"); 
+					self._blockchain._connection.connectAddress({'address':ip});
+				} else {
+					console.log("Error Establishing connection");
+				}
+			} else if (x[0] == "search") {
+				switch (x[1]) {
+					case '--timestamp':
+					case '-t':
+						var data = x[2]; 
+						var composedDateStart = self.validaData(data);
+							// Onde validaData() retorna True se "data" estiver no formato correto; 		
+						if (composedDateStart) {
+							var composedDateEnd;
+							if(x[3] == undefined){
+								composedDateEnd = new Date(composedDateStart.getTime());
+								composedDateEnd.setHours(23);
+								composedDateEnd.setMinutes(59);
+								composedDateEnd.setSeconds(59);				
+							} else{
+								composedDateEnd = self.validaData(x[3]);
+								if(!composedDateEnd) break;
+>>>>>>> ad98f789d69c0a0c7e499d887a4b85931c396ba7
 							}
 						}
 						else {
@@ -144,6 +175,37 @@ class Service {
 		});
 	}
 
+<<<<<<< HEAD
+=======
+
+	comparaLog(path){
+		let self = this;
+
+		return new Promise(function(resolve, reject){
+			self.pesquisaLogFile(path, function(result){
+				let logBlockchain = self.concatField(result, 'data');
+
+					self._fs.readFile(path, 'utf8', function(err, data){
+						if (err) {
+							reject();
+						} else {
+							console.log(data);
+							console.log(logBlockchain)
+							if(data == logBlockchain){
+								console.log("resolve");
+								resolve();
+							} else{
+								console.log("reject");
+								reject();
+							}
+
+						}
+					});
+			});
+		});
+	}
+
+>>>>>>> ad98f789d69c0a0c7e499d887a4b85931c396ba7
 	validaData(date){
 		var matches = /^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/.exec(date);
 		if (matches == null) return false;
@@ -188,7 +250,7 @@ class Service {
 	}
 
 	pesquisaLogData(timestampStart, timestampEnd){
-		console.log("Follow the result of your search by timestamp");
+		console.log("Follows the result of your search by timestamp");
 		let self = this;
 		this._this._blockchain.getAllBlocks().then(function (blocks){
 			let result = [];
@@ -212,7 +274,7 @@ class Service {
 
 	pesquisaLogPK(pathPK){
 		let self = this;
-		console.log("Follow the result of your search by PK");
+		console.log("Follows the result of your search by PK");
 		try{
 			fs.readFile(pathPK, 'utf8', function(err, publicKey){
 				if (err) {
@@ -251,8 +313,9 @@ class Service {
 
 	}
 
-	pesquisaLogCriador(creator){
-		console.log("Follow the result of your search by creator");
+	pesquisaLogCriador(creator, callback){
+		if(callback == undefined)
+			console.log("Follows the result of your search by creator");
 		let self = this;
 		this._blockchain.getAllBlocks().then(function (blocks){
 			let result = [];
@@ -270,13 +333,16 @@ class Service {
 			if(result.length < 1){	
 				console.log("No result found");
 
-			}else 
-			self.printBlockUser(result);
+			}else if(callback != undefined){
+				callback(result);
+			} else
+				self.printBlockUser(result);
 		});
 	}
 
-	pesquisaLogIp(ip){
-		console.log("Follow the result of your search by IP");
+	pesquisaLogIp(ip, callback){
+		if(callback == undefined)
+			console.log("Follows the result of your search by IP");
 		let self = this;
 		this._blockchain.getAllBlocks().then(function (blocks){
 			var result = [];
@@ -294,9 +360,47 @@ class Service {
 			if(result.length < 1){	
 				console.log("No result found");
 
-			}else 
-			self.printBlockUser(result);
+			}else if(callback != undefined){
+				callback(result);
+			} else
+				self.printBlockUser(result);
 		});
+	}
+
+	pesquisaLogFile(path, callback){
+		if(callback == undefined)
+			console.log("Follows the result of your search by file");
+		let self = this;
+		this._blockchain.getAllBlocks().then(function (blocks){
+			var result = [];
+
+			let currentHash = self._blockchain.getGenesisBlock().hash;
+
+			while(currentHash != null){
+				console.log(path);
+				if(blocks[currentHash]["file"] === path){
+					result.push(blocks[currentHash]);
+				}
+				currentHash = blocks[currentHash].nextHash;	
+			}
+
+			if(result.length < 1){	
+				console.log("No result found");
+
+			}else if(callback != undefined){
+				callback(result);
+			} else
+				self.printBlockUser(result);
+		});
+	}
+
+
+	concatField(arrayJson, field){
+		var string = "";
+		for (var i = 0; i < arrayJson.length; i++) {
+			string = string.concat(arrayJson[i][field]);
+		}
+		return string;
 	}
 }
 

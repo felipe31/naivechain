@@ -25,8 +25,6 @@ class Connection {
 		
 
 		this._io.use(function (socket, next) {
-			
-			//console.log(socket.request.connection);
 			let data = socket.handshake.query.data;
 				try {
 					let address = socket.request.connection.remoteAddress;
@@ -34,16 +32,16 @@ class Connection {
 							address = address.substr(7)
 						}
 					// VERIFICADOR
-					if(!this.sockets.find(x => x.address === address) && address != this._ip.address()){
-						let dataDecrypted = JSON.parse(this._security.decryptSymmetric(data));
+					if(!self.sockets.find(x => x.address === address) && address != self._ip.address()){
+						let dataDecrypted = JSON.parse(self._security.decryptSymmetric(data));
 						
-						let publicKeyExtracted = this._security.extractPublicKey(dataDecrypted.publicKey);
+						let publicKeyExtracted = self._security.extractPublicKey(dataDecrypted.publicKey);
 						
 						if(publicKeyExtracted != false){
 
-							if(!this.sockets.find(x => x.publicKey === dataDecrypted.publicKey) && this._security.publicKey != dataDecrypted.publicKey)
+							if(!self.sockets.find(x => x.publicKey === dataDecrypted.publicKey) && self._security.publicKey != dataDecrypted.publicKey)
 							{
-								this.sockets.push({'socket':socket.id, 'address': address, 'publicKey': dataDecrypted.publicKey});
+								self.sockets.push({'socket':socket.id, 'address': address, 'publicKey': dataDecrypted.publicKey});
 								next();
 
 							} else {
@@ -69,7 +67,6 @@ class Connection {
 		});
 
 		this._io.on('connection', function(socket){
-
 
 			let peer = self.sockets.find(x => x.socket === socket.id);
 			console.log("peer connected: "+ peer.address);
@@ -151,6 +148,7 @@ class Connection {
 	}
 
 	connectAddress(address){
+
 		if(!this.clients.find(x => x.address === address.address)) {
 			let client;
 			let data = this._security.encryptSymmetric(JSON.stringify({publicKey: this._security.publicKey}));
@@ -177,7 +175,7 @@ class Connection {
 							client.emit('message', self._security.encryptSymmetric(self.responseLatestMsg()));
 						break;
 						case MessageType.QUERY_ALL:
-							this._blockchain.getAllBlocks().then(
+							self._blockchain.getAllBlocks().then(
 								value => {
 									client.emit('message', self._security.encryptSymmetric(self.responseChainMsg(value)) );
 								},
@@ -205,6 +203,8 @@ class Connection {
 			});
 
 			client.on('disconnect', function () {
+				// Isto está correto? No momento em que um cliente se conecta e cai,
+				// acaba aqui, mas ainda está em clients
 				console.log("one peer disconnected");
 			});
 

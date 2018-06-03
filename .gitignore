@@ -1,6 +1,9 @@
 node_modules
 npm-debug.log
 .idea
-data/*
-keys/*
+data/data.txt
+logs/test.txt
+logs/test2.txt
+keys/private.key
+keys/public.key
 .DS_Store
