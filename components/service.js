@@ -14,8 +14,15 @@ class Service {
 			var x = opt.split(' ');
 			if (x[0] == "exit") {
 				process.exit(1);
+			} else if (x[0] == "connect") {
+				var ip = x[1];
+				if (self.validaIp(ip)) {
+					console.log("Starting connection"); 
+					self._blockchain._connection.connectAddress({'address':ip});
+				} else {
+					console.log("Error Establishing connection");
+				}
 			} else if (x[0] == "search") {
-
 				switch (x[1]) {
 					case '--timestamp':
 					case '-t':
@@ -102,6 +109,7 @@ class Service {
 			} else if (x[0] != "search") {
 				console.log("\n\nUsage:");
 				console.log("\n\tsearch <option>\n\t\tSearch in the blockchain logs according to <option>, it is based\n\t\ton timestamp, creator, ip or public key.");
+				console.log("\n\tconnect <ip>\n\t\tConnect in the blockchain with the given </ip>");
 				console.log("\n\texit\tExit the program.");
 				console.log("\n\thelp\tShow this information.");
 			}
