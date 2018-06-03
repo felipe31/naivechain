@@ -2,5 +2,6 @@ node_modules
 npm-debug.log
 .idea
 data/*
-keys/*
+keys/private.key
+keys/public.key
 .DS_Store
