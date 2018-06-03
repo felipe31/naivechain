@@ -157,20 +157,21 @@ class Service {
 		console.log("Follow the result of your search by timestamp");
 		let self = this;
 		this._this._blockchain.getAllBlocks().then(function (blocks){
-			var result = [];
-			var i;
-			for(i = 1; i < blocks.length; i++){
-				
-				if(blocks[i]["timestamp"] >= timestampStart && blocks[i]["timestamp"] <= timestampEnd){
-					result.push(blocks[i]);
+			let result = [];
+			let currentHash = self._blockchain.getGenesisBlock().hash;
+
+			while(currentHash != null){
+
+				if(blocks[currentHash]["timestamp"] >= timestampStart && blocks[currentHash]["timestamp"] <= timestampEnd){
+					result.push(blocks[currentHash]);
 				}
+				currentHash = blocks[currentHash].nextHash;	
 			}
 
 			if(result.length < 1){	
 				console.log("No result found");
-
 			} else 
-			self.printBlockUser(result);
+				self.printBlockUser(result);
 		});
 
 	}
@@ -186,14 +187,15 @@ class Service {
 					if(publicKey){
 
 						self._blockchain.getAllBlocks().then(function (blocks){
-							var result = [];
-							var i;
+							let result = [];
+							let currentHash = self._blockchain.getGenesisBlock().hash;
 
-							for(i = 1; i < blocks.length; i++){
+							while(currentHash != null){
 
-								if(blocks[i]["publicKey"].trim() === publicKey.trim()){
-									result.push(blocks[i]);
+								if(blocks[currentHash]["publicKey"].trim() === publicKey.trim()){
+									result.push(blocks[currentHash]);
 								}
+								currentHash = blocks[currentHash].nextHash;	
 							}
 							if(result.length < 1){	
 								console.log("No result found");
@@ -219,14 +221,18 @@ class Service {
 		console.log("Follow the result of your search by creator");
 		let self = this;
 		this._blockchain.getAllBlocks().then(function (blocks){
-			var result = [];
-			var i;
-			for(i = 1; i < blocks.length; i++){
-				
-				if(blocks[i]["creator"] === creator){
-					result.push(blocks[i]);
+			let result = [];
+
+			let currentHash = self._blockchain.getGenesisBlock().hash;
+
+			while(currentHash != null){
+
+				if(blocks[currentHash]["creator"] === creator){
+					result.push(blocks[currentHash]);
 				}
+				currentHash = blocks[currentHash].nextHash;	
 			}
+
 			if(result.length < 1){	
 				console.log("No result found");
 
@@ -240,13 +246,17 @@ class Service {
 		let self = this;
 		this._blockchain.getAllBlocks().then(function (blocks){
 			var result = [];
-			var i;
-			for(i = 1; i < blocks.length; i++){
-				
-				if(blocks[i]["ip"] === ip){
-					result.push(blocks[i]);
+
+			let currentHash = self._blockchain.getGenesisBlock().hash;
+
+			while(currentHash != null){
+
+				if(blocks[currentHash]["ip"] === ip){
+					result.push(blocks[currentHash]);
 				}
+				currentHash = blocks[currentHash].nextHash;	
 			}
+
 			if(result.length < 1){	
 				console.log("No result found");
 
