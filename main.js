@@ -24,7 +24,7 @@ var cn = new Connection(io, ioClient, ip, http, security, bc);
 bc.setConnection(cn);
 
 var Service = require('./components/service.js');
-var sv = new Service(bc);
+var sv = new Service(bc, fs);
 
 var logManager = require('./components/logmanager.js');
 var lm = new logManager(fs, tail, bc);

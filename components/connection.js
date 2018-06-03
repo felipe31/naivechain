@@ -21,6 +21,7 @@ class Connection {
 
 		this.sockets = [];
 		this.clients = [];
+		let self = this;
 		
 
 		this._io.use(function (socket, next) {
@@ -67,7 +68,6 @@ class Connection {
 				}
 		});
 
-		let self = this;
 		this._io.on('connection', function(socket){
 
 
