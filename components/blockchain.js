@@ -31,7 +31,7 @@ class Blockchain {
 
 		this.getAllBlocks().then(
 			value => {
-				if(this.isValidChain(value)){
+				if(value && this.isValidChain(value)){
 					this.latestBlock = this.getLastBlock(value);
 					this.idx = this.latestBlock.index;
 				} else {
@@ -50,10 +50,10 @@ class Blockchain {
 	}
 
 	getLastBlock(blocks){
-		if(blocks[this.getGenesisBlock().hash].previoushash == null){
+		if(blocks[this.getGenesisBlock().hash].previousHash == null){
 			return blocks[this.getGenesisBlock().hash];
 		} else {
-			return blocks[blocks[this.getGenesisBlock().hash].previoushash];
+			return blocks[blocks[this.getGenesisBlock().hash].previousHash];
 		}
 	}
 
@@ -145,14 +145,14 @@ class Blockchain {
 				console.log('invalid index');
 				reject();
 			} else if (previousBlock.hash !== newBlock.previousHash) {
-				console.log('invalid previoushash');
+				console.log('invalid previousHash');
 				reject();
 			} else if (self.calculateHashForBlock(newBlock) !== newBlock.hash) {
 				console.log(typeof (newBlock.hash) + ' ' + typeof self.calculateHashForBlock(newBlock));
 				console.log('invalid hash: ' + self.calculateHashForBlock(newBlock) + ' ' + newBlock.hash);
 				reject();
 			} else if (previousBlock.nextHash !== newBlock.hash) {
-				console.log('invalid previoushash.nextHash');
+				console.log('invalid previousHash.nextHash');
 				reject();
 			} else if(!self._security.verifySignature(newBlock.data, newBlock.signature, newBlock.publicKey)){
 				console.log('invalid signature');
@@ -238,7 +238,7 @@ class Blockchain {
 						}
 
 						blocks[self.latestBlock.hash].nextHash = addblocks[firstHash].hash;
-						blocks[self.getGenesisBlock().hash].previoushash = last.hash;
+						blocks[self.getGenesisBlock().hash].previousHash = last.hash;
 
 					}
 
@@ -314,7 +314,7 @@ class Blockchain {
 							}
 
 							value[self.latestBlock.hash].nextHash = addblocks[firstHash].hash;
-							value[self.getGenesisBlock().hash].previoushash = last.hash;
+							value[self.getGenesisBlock().hash].previousHash = last.hash;
 
 						}
 
@@ -358,13 +358,13 @@ class Blockchain {
 			try{
 				let myBlocks = await self.getAllBlocks();
 				let myLast = this.latestBlock;
-					let newLast = newBlocks[newBlocks[self.getGenesisBlock().hash].previoushash];
+					let newLast = newBlocks[newBlocks[self.getGenesisBlock().hash].previousHash];
 
 					// Achar o ponto comum 
 					if(myLast.index > newLast.index){
 						
 						while(myLast.index != newLast.index){
-							myLast = myBlocks[myLast.previoushash];
+							myLast = myBlocks[myLast.previousHash];
 						}
 
 						if(myLast.hash == newLast.hash){
@@ -384,7 +384,7 @@ class Blockchain {
 
 					} else {
 						while(myLast.index != newLast.index){
-							newLast = newBlocks[newLast.previoushash];
+							newLast = newBlocks[newLast.previousHash];
 						}
 
 						if(myLast.hash == newLast.hash){
@@ -393,18 +393,18 @@ class Blockchain {
 							let newsBlocksToAdd = [];
 
 							while(newLast.nextHash != null){
-								myLast = myBlocks[myLast.nextHash];
+								newLast = myBlocks[newLast.nextHash];
 								newsBlocksToAdd.push(newLast);
 							}
 
-							self.appendBlock(newsBlocksToAdd);
+							if(newsBlocksToAdd != 0) self.appendBlock(newsBlocksToAdd);
 							return;
 						}
 					}
 
-					while(myLast.previoushash != newLast.previoushash){
-						myLast = myBlocks[myLast.previoushash];
-						newLast = newBlocks[newLast.previoushash];
+					while(myLast.previousHash != newLast.previousHash){
+						myLast = myBlocks[myLast.previousHash];
+						newLast = newBlocks[newLast.previousHash];
 					}
 					try{
 						let response = await self._connection.questionBlock(myLast, newLast);
@@ -420,7 +420,7 @@ class Blockchain {
 								try{
 									last.nextHash = newLast.hash;
 
-									newLast.previoushash = last.hash;
+									newLast.previousHash = last.hash;
 
 									self.idx++;
 
@@ -451,7 +451,7 @@ class Blockchain {
 								}
 
 								myBlocks[self.latestBlock.hash].nextHash = newsBlocksToAdd[firstHash].hash;
-								myBlocks[self.getGenesisBlock().hash].previoushash = last.hash;
+								myBlocks[self.getGenesisBlock().hash].previousHash = last.hash;
 
 							
 
@@ -481,7 +481,7 @@ class Blockchain {
 
 							let newsBlocksToAdd = [];
 
-							let last = newBlocks[newBlocks[self.getGenesisBlock().hash].previoushash];
+							let last = newBlocks[newBlocks[self.getGenesisBlock().hash].previousHash];
 							let firstHash = null;
 							self.idx = last.index;
 
@@ -490,7 +490,7 @@ class Blockchain {
 								try{
 									last.nextHash = myLast.hash;
 
-									myLast.previoushash = last.hash;
+									myLast.previousHash = last.hash;
 
 									self.idx++;
 
@@ -520,8 +520,8 @@ class Blockchain {
 										newBlocks[p] = newsBlocksToAdd[p];
 									}
 
-									newBlocks[newBlocks[newBlocks[self.getGenesisBlock().hash].previoushash].hash].nextHash = newsBlocksToAdd[firstHash].hash;
-									newBlocks[self.getGenesisBlock().hash].previoushash = last.hash;
+									newBlocks[newBlocks[newBlocks[self.getGenesisBlock().hash].previousHash].hash].nextHash = newsBlocksToAdd[firstHash].hash;
+									newBlocks[self.getGenesisBlock().hash].previousHash = last.hash;
 
 								
 
@@ -550,6 +550,7 @@ class Blockchain {
 					}
 
 			} catch (e){
+				console.log(e);
 				console.log("error file read");
 			}
 		}

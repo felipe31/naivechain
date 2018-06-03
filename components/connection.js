@@ -225,8 +225,12 @@ class Connection {
 			});
 
 			client.on('disconnect', function () {
-				// Isto está correto? No momento em que um cliente se conecta e cai,
-				// acaba aqui, mas ainda está em clients
+				
+				let index = self.clients.findIndex(x => x.address === address.address);
+				//console.log(index);
+				if (index !== -1) {
+					self.clients.splice(index, 1);
+				}
 				console.log("one peer disconnected");
 			});
 
@@ -247,7 +251,8 @@ class Connection {
 		if(this._blockchain.lock == 0 && this.messageToAdd.length != 0){
 			this._blockchain.lock = 1;
 			let self = this;
-			let message = self.messageToAdd.splice(0, 1);
+			let message = self.messageToAdd[0];
+			self.messageToAdd.splice(0, 1);
 
 			let receivedBlocks = JSON.parse(message.data);
 
