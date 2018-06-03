@@ -31,35 +31,30 @@ class Blockchain {
 
 		this.getAllBlocks().then(
 			value => {
-				this.isValidChain(value).then(
-					value_empty => {
-						this.latestBlock = this.getLastBlock(value);
-						this.idx = this.latestBlock.index;	
-					},	
-					error_empty => {
-						this.deleteOldFiles().then(
-							value => {
-								this.startChain();
-							},
-							error => {
-								console.log(error); // Error!
-								console.log("erro excluir arquivos");
-							}
-						);
-					});
+				if(this.isValidChain(value)){
+					this.latestBlock = this.getLastBlock(value);
+					this.idx = this.latestBlock.index;
+				} else {
+					this.deleteOldFiles().then(
+						value => {
+							this.startChain();
+						},
+						error => {
+							console.log(error); // Error!
+							console.log("erro excluir arquivos");
+						}
+					);
+				}
 			}
 		);
 	}
 
 	getLastBlock(blocks){
-		let next = blocks[this.getGenesisBlock().hash];
-		
-
-		while(next.nextHash != null) {
-			next = blocks[next.nextHash];
-		};
-
-		return next;
+		if(blocks[this.getGenesisBlock().hash].previoushash == null){
+			return blocks[this.getGenesisBlock().hash];
+		} else {
+			return blocks[blocks[this.getGenesisBlock().hash].previoushash];
+		}
 	}
 
 	setConnection(connection){
@@ -70,15 +65,15 @@ class Blockchain {
 		let genesis = this.getGenesisBlock();
 		let value = new Object();
 		value[genesis.hash] = genesis;
-		console.log(value.length);
-		value = this._security.encryptSymmetric(JSON.stringify(value));
 
+		value = this._security.encryptSymmetric(JSON.stringify(value));
 
 		this._fs.writeFile('./data/data.txt', value, function (err) {
 			if (err) {
 				console.log("erro de escrita");
 			}
 		});
+
 		console.log('genesis add');
 
 		this.latestBlock = genesis;
@@ -110,10 +105,10 @@ class Blockchain {
 		let signature = this._security.signature("genesis", 1);
 		return new Block(0,1465154705000, "genesis", this.calculateHash(0, 1465154705000, "genesis", "Blockchain Services", this._security.programPub, signature, "0.0.0.0", ""), "Blockchain Services", this._security.programPub, signature, "0.0.0.0", "");
 	}
+
 	addBlock(blockData, file, type, connection){
 		this.blockToQueue({data: blockData, file: file, type: type});
 	}
-
 
 	generateNextBlock(blockData, file, type){
 		this.idx++;
@@ -123,23 +118,22 @@ class Blockchain {
 
 		if(type == 0){
 			let signature = this._security.signature(blockData, 0);
-			let nextHash = this.calculateHash(nextIndex, nextTimestamp, blockData, this._security.publicKeyExtracted.commonName, this._security.publicKey, signature, this._ip.address(), file);
-			// this.latestBlock.nextHash = nextHash;
+			let nextHash = this.calculateHash(nextTimestamp, blockData, this._security.publicKeyExtracted.commonName, this._security.publicKey, signature, this._ip.address(), file);
 			return new Block(nextIndex, nextTimestamp, blockData, nextHash, this._security.publicKeyExtracted.commonName, this._security.publicKey, signature, this._ip.address(), file);
 		} else {
 			let signature = this._security.signature(blockData, 1);
-			let nextHash = this.calculateHash(nextIndex, nextTimestamp, blockData, "Blockchain Services", this._security.programPub, signature, this._ip.address(), file);
+			let nextHash = this.calculateHash(nextTimestamp, blockData, "Blockchain Services", this._security.programPub, signature, this._ip.address(), file);
 			return new Block(nextIndex, nextTimestamp, blockData, nextHash, "Blockchain Services", this._security.programPub, signature, this._ip.address(), file);
 		}
 	};
 
-	calculateHash(index, timestamp, data, creator, publicKey, signature, ip, file){
-		return this._security.hash(index + timestamp + data + creator + publicKey + signature + ip + file);
+	calculateHash(timestamp, data, creator, publicKey, signature, ip, file){
+		return this._security.hash(timestamp + data + creator + publicKey + signature + ip + file);
 
 	};
 
 	calculateHashForBlock(block){
-		return this.calculateHash(block.index, block.timestamp, block.data, block.creator, block.publicKey, block.signature, block.ip, block.file);
+		return this.calculateHash(block.timestamp, block.data, block.creator, block.publicKey, block.signature, block.ip, block.file);
 	};
 
 	isValidNewBlock (newBlock, previousBlock){
@@ -163,17 +157,18 @@ class Blockchain {
 			} else if(!self._security.verifySignature(newBlock.data, newBlock.signature, newBlock.publicKey)){
 				console.log('invalid signature');
 				reject();
-			} else{
+			} else {
 				self.getAllBlocks().then(
 					value => {
 						// Verify if the position of the newBlock is already taken
 						if (value[self.calculateHashForBlock(newBlock)] !== undefined) {
 							console.log('hash position already in use!');
 							reject();
+						} else {
+							resolve();
 						}
 				});
 			}
-			resolve();
 		});
 	};
 
@@ -200,17 +195,75 @@ class Blockchain {
 		});
 	}
 
-	replace(newBlocks){
+	async appendBlock(blocks){
+		let self = this;
 
-		let value = this._security.encryptSymmetric(JSON.stringify(newBlocks));
+		let last = self.latestBlock;
+		let blocksCounter = 0;
 
-		this._fs.writeFile('./data/data.txt', value, function (err) {
-			if (err) {
-				console.log("erro de escrita");
+		let addblocks = [];
+		let firstHash = null;
+
+		last.nextHash = blocks[0].hash;
+		blocks[0].previousHash = last.hash;
+
+		for (var i = 0; i < blocks.length; i++) {
+
+			try{
+				await self.isValidNewBlock(blocks[i], last);
+
+				if(firstHash == null ) firstHash = blocks[i].hash;
+
+				if (Object.keys(addblocks).length != 0) {
+					addblocks[last.hash].nextHash = blocks[i].hash;
+				}
+
+				addblocks[blocks[i].hash] = blocks[i];
+
+				last = blocks[i];
+
+				blocksCounter++;
+			} catch(e){ 
+				console.log("some block is not valid");
 			}
-		});
-	}
+		}
 
+		self.getAllBlocks().then(
+			blocks => {
+
+				if(value){
+				
+					for(let p in addblocks){
+						value[p] = addblocks[p];
+					}
+
+					value[self.latestBlock.hash].nextHash = addblocks[firstHash].hash;
+					value[self.getGenesisBlock().hash].previoushash = last.hash;
+
+				}
+
+				value = self._security.encryptSymmetric(JSON.stringify(value));
+
+				self._fs.writeFile('./data/data.txt', value, function (err) {
+					if (err) {
+						console.log("erro de escrita");
+					}
+				});
+				
+				self.latestBlock = last;
+				self._connection.broadcast(self._connection.responseLatestMsg());
+				
+				self.lock = 0;
+
+				if(self._connection.messageToAdd.length != 0){
+					self._connection.handleBlockchainResponse();
+				} else if (this.blocksToAdd.length != 0){
+					self.pushBlock();
+				}
+
+			}
+		);
+	}
 
 	async pushBlock(){	
 	
@@ -235,10 +288,10 @@ class Blockchain {
 
 				try{
 					await self.isValidNewBlock(block, last);
-					if (addblocks.length != 0) {
+					if (Object.keys(addblocks).length != 0) {
 						addblocks[last.hash].nextHash = block.hash;
-
 					}
+
 					if(firstHash == null ) firstHash = block.hash;
 
 					addblocks[block.hash] = block;
@@ -258,11 +311,10 @@ class Blockchain {
 							for(let p in addblocks){
 								value[p] = addblocks[p];
 							}
-							value[self.latestBlock.hash].nextHash = addblocks[firstHash].hash;
-							
 
-						} else {
-							value = addblocks;
+							value[self.latestBlock.hash].nextHash = addblocks[firstHash].hash;
+							value[self.getGenesisBlock().hash].previoushash = last.hash;
+
 						}
 
 						value = self._security.encryptSymmetric(JSON.stringify(value));
@@ -280,7 +332,13 @@ class Blockchain {
 						self._connection.broadcast(self._connection.responseLatestMsg());
 						
 						self.lock = 0;
-						self.pushBlock();
+
+						if(self._connection.messageToAdd.length != 0){
+							self._connection.handleBlockchainResponse();
+						} else if (this.blocksToAdd.length != 0){
+							self.pushBlock();
+						}
+						
 
 					}, error => {
 						//console.log("get all blocks");
@@ -291,49 +349,230 @@ class Blockchain {
 		}
 	}
 
-	tryReplaceChain(newBlocks){
+	async mergeBlockChains(newBlocks){
 		let self = this;
 
-		return new Promise(function(resolve, reject) {
-			self.isValidChain(newBlocks).then(
-				value => {
-					if (newBlocks.length > self.latestBlock.index) {
-						console.log('Received blockchain is valid. Replacing current blockchain with received blockchain');
+		if(self.isValidChain(newBlocks)){
 
-						self.replace(newBlocks);
-						resolve();
+			try{
+				let myBlocks = await self.getAllBlocks();
+				let myLast = this.latestBlock;
+					let newLast = newBlocks[newBlocks[self.getGenesisBlock().hash].previoushash];
+
+					// Achar o ponto comum 
+					if(myLast.index > newLast.index){
+						
+						while(myLast.index != newLast.index){
+							newLast = newBlocks[newLast.previoushash];
+						}
+
+						if(myLast.hash == newLast.hash){
+							// blockchain correta, a nova está desatualizada, então só enviar
+							self._connection.broadcast(self._connection.queryAllMsg());
+
+							self.lock = 0;
+
+							if(self._connection.messageToAdd.length != 0){
+								self._connection.handleBlockchainResponse();
+							} else if (this.blocksToAdd.length != 0){
+								self.pushBlock();
+							}
+
+							return;
+						}
+
 					} else {
-						console.log('Received blockchain invalid');
-						reject();
+						while(myLast.index != newLast.index){
+							myLast = myBlocks[myLast.previoushash];
+						}
+
+						if(myLast.hash == newLast.hash){
+							// blockchain atrasada, só atualizar
+
+							let newsBlocksToAdd = [];
+
+							while(newLast.nextHash != null){
+								myLast = myBlocks[myLast.nextHash];
+								newsBlocksToAdd.push(newLast);
+							}
+
+							self.appendBlock(newsBlocksToAdd);
+							return;
+						}
 					}
-			});
-		});
+
+					while(myLast.previoushash != newLast.previoushash){
+						myLast = myBlocks[myLast.previoushash];
+						newLast = newBlocks[newLast.previoushash];
+					}
+					try{
+						let response = await self._connection.questionBlock(myLast, newLast);
+						if(response == 0){
+							// minha blockchain está correta
+							let newsBlocksToAdd = [];
+
+							let last = self.latestBlock;
+							let firstHash = null;
+
+							do {
+
+								try{
+									last.nextHash = newLast.hash;
+
+									newLast.previoushash = last.hash;
+
+									self.idx++;
+
+									newLast.index = self.idx;
+
+									await self.isValidNewBlock(newLast, last);
+
+									if (Object.keys(newsBlocksToAdd).length != 0) {
+										newsBlocksToAdd[last.hash].nextHash = newLast.hash;
+									}
+									if(firstHash == null ) firstHash = newLast.hash;
+								
+									newsBlocksToAdd.push(newLast);
+									last = newLast;
+
+								} catch(e){
+									self.idx--;
+								}
+
+								newLast = newBlocks[newLast.nextHash];
+								
+							} while(newLast.nextHash != null);
+
+							if(Object.keys(newsBlocksToAdd).length != 0){
+
+								for(let p in newsBlocksToAdd){
+									myBlocks[p] = newsBlocksToAdd[p];
+								}
+
+								myBlocks[self.latestBlock.hash].nextHash = newsBlocksToAdd[firstHash].hash;
+								myBlocks[self.getGenesisBlock().hash].previoushash = last.hash;
+
+							
+
+								myBlocks = self._security.encryptSymmetric(JSON.stringify(myBlocks));
+
+								self._fs.writeFile('./data/data.txt', myBlocks, function (err) {
+									if (err) {
+										console.log("erro de escrita");
+									}
+								});
+								
+								self.latestBlock = last;
+								self._connection.broadcast(self._connection.responseLatestMsg());
+								
+								self.lock = 0;
+
+								if(self._connection.messageToAdd.length != 0){
+									self._connection.handleBlockchainResponse();
+								} else if (this.blocksToAdd.length != 0){
+									self.pushBlock();
+								}
+							}
+
+
+						} else {
+							// minha blockchain está errada
+
+							let newsBlocksToAdd = [];
+
+							let last = newBlocks[newBlocks[self.getGenesisBlock().hash].previoushash];
+							let firstHash = null;
+							self.idx = last.index;
+
+							do {
+
+								try{
+									last.nextHash = myLast.hash;
+
+									myLast.previoushash = last.hash;
+
+									self.idx++;
+
+									myLast.index = self.idx;
+
+									await self.isValidNewBlock(myLast, last);
+
+									if (Object.keys(newsBlocksToAdd).length != 0) {
+										newsBlocksToAdd[last.hash].nextHash = myLast.hash;
+									}
+									if(firstHash == null ) firstHash = myLast.hash;
+								
+									newsBlocksToAdd.push(myLast);
+									last = myLast;
+
+								} catch(e){
+									self.idx--;
+								}
+
+								myLast = myBlocks[myLast.nextHash];
+								
+							} while(myLast.nextHash != null);
+
+							if(Object.keys(newsBlocksToAdd).length != 0){
+
+									for(let p in newsBlocksToAdd){
+										newBlocks[p] = newsBlocksToAdd[p];
+									}
+
+									newBlocks[newBlocks[newBlocks[self.getGenesisBlock().hash].previoushash].hash].nextHash = newsBlocksToAdd[firstHash].hash;
+									newBlocks[self.getGenesisBlock().hash].previoushash = last.hash;
+
+								
+
+								newBlocks = self._security.encryptSymmetric(JSON.stringify(newBlocks));
+
+								self._fs.writeFile('./data/data.txt', newBlocks, function (err) {
+									if (err) {
+										console.log("erro de escrita");
+									}
+								});
+								
+								self.latestBlock = last;
+								self._connection.broadcast(self._connection.responseLatestMsg());
+								
+								self.lock = 0;
+
+								if(self._connection.messageToAdd.length != 0){
+									self._connection.handleBlockchainResponse();
+								} else if (this.blocksToAdd.length != 0){
+									self.pushBlock();
+								}
+							}
+						}
+					} catch (e){
+						console.log("error connection");
+					}
+
+			} catch (e){
+				console.log("error file read");
+			}
+		}
 	};
 
-	isValidChain(blockchainToValidate){
+	async isValidChain(blockchainToValidate){
 		let self = this;
-
-		return new Promise(function(resolve, reject) {
-			
-			var hashCurrentBlock = self.getGenesisBlock().hash;
-			if (blockchainToValidate[hashCurrentBlock] == undefined) {
-				reject();
-			}	
-			var tempBlocks = [blockchainToValidate[hashCurrentBlock]];
-			for (var i = 1; i < blockchainToValidate.length; i++) {
-				hashCurrentBlock = blockchainToValidate[hashCurrentBlock].nextHash;
-				if (blockchainToValidate[hashCurrentBlock]) {
-					
-					self.isValidNewBlock(blockchainToValidate[hashCurrentBlock], tempBlocks[i - 1]).then(
-						value => {
-							tempBlocks.push(blockchainToValidate[hashCurrentBlock]);
-						}, error => {
-							reject();
-						});
+		var hashCurrentBlock = self.getGenesisBlock().hash;
+		if (blockchainToValidate[hashCurrentBlock] == undefined) {
+			return false;
+		}	
+		var tempBlocks = [blockchainToValidate[hashCurrentBlock]];
+		for (var i = 1; i < blockchainToValidate.length; i++) {
+			hashCurrentBlock = blockchainToValidate[hashCurrentBlock].nextHash;
+			if (blockchainToValidate[hashCurrentBlock]) {
+				try{
+					await self.isValidNewBlock(blockchainToValidate[hashCurrentBlock], tempBlocks[i - 1]);
+					tempBlocks.push(blockchainToValidate[hashCurrentBlock]);
+				} catch(e){ 
+					return false;
 				}
 			}
-			resolve();
-		});
+		}
+		return true;
 	}
 };
 

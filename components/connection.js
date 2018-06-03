@@ -21,6 +21,8 @@ class Connection {
 
 		this.sockets = [];
 		this.clients = [];
+		this.messageToAdd = [];
+		this.lock = 0;
 		
 
 		this._io.use(function (socket, next) {
@@ -97,7 +99,7 @@ class Connection {
 							self.write(socket.id, self.responseLatestMsg());
 						break;
 						case MessageType.RESPONSE_BLOCKCHAIN:
-							self.handleBlockchainResponse(dataDecrypted);
+							self.messageToQueue(dataDecrypted);
 						break;
 					}
 
@@ -105,6 +107,25 @@ class Connection {
 					console.log("package damaged server");
 				}
 			});
+
+			socket.on('check', function(result, fn) {
+			    try {
+					let dataDecrypted = JSON.parse(self._security.decryptSymmetric(result));
+					this._blockchain.getAllBlocks.then(value => {
+						if(value[dataDecrypted[0].hash] !== undefined){
+							fn(0);
+						} else if(value[dataDecrypted[1].hash] !== undefined){
+							fn(1);
+						} else {
+							fn(-1);
+						}
+					})
+
+				} catch (err){
+					console.log("package damaged server");
+				}
+			    
+			 });
 
 		});
 
@@ -171,7 +192,7 @@ class Connection {
 							self.connectAddress(dataDecrypted);
 						break;
 						case MessageType.RESPONSE_BLOCKCHAIN:
-							self.handleBlockchainResponse(dataDecrypted);
+							self.messageToQueue(dataDecrypted);
 						break;
 						case MessageType.QUERY_LATEST:
 							client.emit('message', self._security.encryptSymmetric(self.responseLatestMsg()));
@@ -215,35 +236,34 @@ class Connection {
 		}
 	}
 
-	handleBlockchainResponse(message){
+	messageToQueue(message){
+		this.messageToAdd.push([message]);
+		this.handleBlockchainResponse();
+	}
 
-		var receivedBlocks = JSON.parse(message.data).sort((b1, b2) => (b1.index - b2.index));
-		var latestBlockReceived = receivedBlocks[receivedBlocks.length - 1];
-		var latestBlockHeld = this._blockchain.latestBlock;
-		if (latestBlockReceived.index > latestBlockHeld.index) {
-			console.log('blockchain possibly behind. We got: ' + latestBlockHeld.index + ' Peer got: ' + latestBlockReceived.index);
-			if (latestBlockHeld.hash === latestBlockReceived.previousHash) {
-				console.log("We can append the received block to our chain");
+	handleBlockchainResponse(){
 
-				//------------------------------------------------------ 
-				// VERIFICAR
-				//------------------------------------------------------ 
+		if(this._blockchain.lock == 0 && this.messageToAdd.length != 0){
+			this._blockchain.lock = 1;
+			let self = this;
+			let message = self.messageToAdd.splice(0, 1);
 
-				this._blockchain.blockToQueue(latestBlockReceived);
-				
-			} else if (receivedBlocks.length === 1) {
-				console.log("We have to query the chain from our peer");
-				this.broadcast(this.queryAllMsg());
+			let receivedBlocks = JSON.parse(message.data).sort((b1, b2) => (b1.index - b2.index));
+
+			if(Object.keys(receivedBlocks).length == 1){
+
+				let latestBlockReceived = receivedBlocks[Object.keys(receivedBlocks)[0]];
+				let latestBlockHeld = self._blockchain.latestBlock;
+				if (latestBlockHeld.hash === latestBlockReceived.previousHash) {
+
+					self._blockchain.appendBlock([latestBlockReceived]);
+				} else {
+					self.broadcast(self.queryAllMsg());
+					// the peer need to send all blocks
+				}
 			} else {
-				console.log("Received blockchain is longer than current blockchain");
-				this._blockchain.tryReplaceChain(receivedBlocks).then(
-					value => {
-						this.broadcast(this.responseLatestMsg());	
-					}
-				);
+				self._blockchain.mergeBlockChains(receivedBlocks, socketID);
 			}
-		} else {
-			console.log('received blockchain is not longer than current blockchain. Do nothing');
 		}
 	};
 
@@ -257,6 +277,28 @@ class Connection {
 			let data = this._security.encryptSymmetric(str);
 			this._io.to(this.sockets[i].socket).emit('message', data);
 		}
+	}
+
+	questionBlock(block1, block2){
+		return new Promise(function(resolve, reject) {
+			let count0 = 0;
+			let count1 = 0;
+			for (var i = this.clients.length - 1; i >= 0; i--) {
+				let send = this._security.encryptSymmetric(JSON.stringify([block1, block2]));
+				this.clients[i].emit('check', send, function (data) { 
+				    if(data == 0){
+				    	count0++;
+				    } else if (data == 1){
+				    	count1++;
+				    }
+				});
+			}
+			if(count0 >= count1){
+				resolve(0);
+			} else {
+				resolve(1);
+			}
+		});
 	}
 
 }
