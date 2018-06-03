@@ -14,7 +14,6 @@ class Service {
 			self.comparaLog("./logs/test.txt");
 			var opt = d.toString().trim();
 			var x = opt.split(' ');
-<<<<<<< HEAD
 
 			switch (x[0]) {
 				case "exit":
@@ -29,35 +28,7 @@ class Service {
 								console.log("The logs were verified with the blockchain");
 							} else {
 								console.log("The logs in blockchain do NOT correspond with the local logs");
-=======
-			if (x[0] == "exit") {
-				process.exit(1);
-			} else if (x[0] == "connect") {
-				var ip = x[1];
-				if (self.validaIp(ip)) {
-					console.log("Starting connection"); 
-					self._blockchain._connection.connectAddress({'address':ip});
-				} else {
-					console.log("Error Establishing connection");
-				}
-			} else if (x[0] == "search") {
-				switch (x[1]) {
-					case '--timestamp':
-					case '-t':
-						var data = x[2]; 
-						var composedDateStart = self.validaData(data);
-							// Onde validaData() retorna True se "data" estiver no formato correto; 		
-						if (composedDateStart) {
-							var composedDateEnd;
-							if(x[3] == undefined){
-								composedDateEnd = new Date(composedDateStart.getTime());
-								composedDateEnd.setHours(23);
-								composedDateEnd.setMinutes(59);
-								composedDateEnd.setSeconds(59);				
-							} else{
-								composedDateEnd = self.validaData(x[3]);
-								if(!composedDateEnd) break;
->>>>>>> ad98f789d69c0a0c7e499d887a4b85931c396ba7
+
 							}
 						}
 						else {
@@ -175,8 +146,6 @@ class Service {
 		});
 	}
 
-<<<<<<< HEAD
-=======
 
 	comparaLog(path){
 		let self = this;
@@ -205,7 +174,6 @@ class Service {
 		});
 	}
 
->>>>>>> ad98f789d69c0a0c7e499d887a4b85931c396ba7
 	validaData(date){
 		var matches = /^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/.exec(date);
 		if (matches == null) return false;
