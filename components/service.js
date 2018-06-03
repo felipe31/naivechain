@@ -10,6 +10,7 @@ class Service {
 		let self = this;
 		stdin.addListener("data", function(d) {
 
+			self.comparaLog("./logs/test.txt");
 			var opt = d.toString().trim();
 			var x = opt.split(' ');
 			if (x[0] == "exit") {
@@ -117,6 +118,33 @@ class Service {
 	}
 
 
+	comparaLog(path){
+		let self = this;
+
+		return new Promise(function(resolve, reject){
+			self.pesquisaLogFile(path, function(result){
+				let logBlockchain = self.concatField(result, 'data');
+
+					self._fs.readFile(path, 'utf8', function(err, data){
+						if (err) {
+							reject();
+						} else {
+							console.log(data);
+							console.log(logBlockchain)
+							if(data == logBlockchain){
+								console.log("resolve");
+								resolve();
+							} else{
+								console.log("reject");
+								reject();
+							}
+
+						}
+					});
+			});
+		});
+	}
+
 	validaData(date){
 		var matches = /^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/.exec(date);
 		if (matches == null) return false;
@@ -161,7 +189,7 @@ class Service {
 	}
 
 	pesquisaLogData(timestampStart, timestampEnd){
-		console.log("Follow the result of your search by timestamp");
+		console.log("Follows the result of your search by timestamp");
 		let self = this;
 		this._this._blockchain.getAllBlocks().then(function (blocks){
 			let result = [];
@@ -185,7 +213,7 @@ class Service {
 
 	pesquisaLogPK(pathPK){
 		let self = this;
-		console.log("Follow the result of your search by PK");
+		console.log("Follows the result of your search by PK");
 		try{
 			fs.readFile(pathPK, 'utf8', function(err, publicKey){
 				if (err) {
@@ -224,8 +252,9 @@ class Service {
 
 	}
 
-	pesquisaLogCriador(creator){
-		console.log("Follow the result of your search by creator");
+	pesquisaLogCriador(creator, callback){
+		if(callback == undefined)
+			console.log("Follows the result of your search by creator");
 		let self = this;
 		this._blockchain.getAllBlocks().then(function (blocks){
 			let result = [];
@@ -243,13 +272,16 @@ class Service {
 			if(result.length < 1){	
 				console.log("No result found");
 
-			}else 
-			self.printBlockUser(result);
+			}else if(callback != undefined){
+				callback(result);
+			} else
+				self.printBlockUser(result);
 		});
 	}
 
-	pesquisaLogIp(ip){
-		console.log("Follow the result of your search by IP");
+	pesquisaLogIp(ip, callback){
+		if(callback == undefined)
+			console.log("Follows the result of your search by IP");
 		let self = this;
 		this._blockchain.getAllBlocks().then(function (blocks){
 			var result = [];
@@ -267,9 +299,47 @@ class Service {
 			if(result.length < 1){	
 				console.log("No result found");
 
-			}else 
-			self.printBlockUser(result);
+			}else if(callback != undefined){
+				callback(result);
+			} else
+				self.printBlockUser(result);
 		});
+	}
+
+	pesquisaLogFile(path, callback){
+		if(callback == undefined)
+			console.log("Follows the result of your search by file");
+		let self = this;
+		this._blockchain.getAllBlocks().then(function (blocks){
+			var result = [];
+
+			let currentHash = self._blockchain.getGenesisBlock().hash;
+
+			while(currentHash != null){
+				console.log(path);
+				if(blocks[currentHash]["file"] === path){
+					result.push(blocks[currentHash]);
+				}
+				currentHash = blocks[currentHash].nextHash;	
+			}
+
+			if(result.length < 1){	
+				console.log("No result found");
+
+			}else if(callback != undefined){
+				callback(result);
+			} else
+				self.printBlockUser(result);
+		});
+	}
+
+
+	concatField(arrayJson, field){
+		var string = "";
+		for (var i = 0; i < arrayJson.length; i++) {
+			string = string.concat(arrayJson[i][field]);
+		}
+		return string;
 	}
 }
 
