@@ -21,11 +21,12 @@ class Connection {
 
 		this.sockets = [];
 		this.clients = [];
+		let self = this;
 		
 
 		this._io.use(function (socket, next) {
-			
-			//console.log(socket.request.connection);
+			console.log("[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[");
+			console.log(self.clients);
 			let data = socket.handshake.query.data;
 				try {
 					let address = socket.request.connection.remoteAddress;
@@ -33,16 +34,16 @@ class Connection {
 							address = address.substr(7)
 						}
 					// VERIFICADOR
-					if(!this.sockets.find(x => x.address === address) && address != this._ip.address()){
-						let dataDecrypted = JSON.parse(this._security.decryptSymmetric(data));
+					if(!self.sockets.find(x => x.address === address) && address != self._ip.address()){
+						let dataDecrypted = JSON.parse(self._security.decryptSymmetric(data));
 						
-						let publicKeyExtracted = this._security.extractPublicKey(dataDecrypted.publicKey);
+						let publicKeyExtracted = self._security.extractPublicKey(dataDecrypted.publicKey);
 						
 						if(publicKeyExtracted != false){
 
-							if(!this.sockets.find(x => x.publicKey === dataDecrypted.publicKey) && this._security.publicKey != dataDecrypted.publicKey)
+							if(!self.sockets.find(x => x.publicKey === dataDecrypted.publicKey) && self._security.publicKey != dataDecrypted.publicKey)
 							{
-								this.sockets.push({'socket':socket.id, 'address': address, 'publicKey': dataDecrypted.publicKey});
+								self.sockets.push({'socket':socket.id, 'address': address, 'publicKey': dataDecrypted.publicKey});
 								next();
 
 							} else {
@@ -67,9 +68,9 @@ class Connection {
 				}
 		});
 
-		let self = this;
 		this._io.on('connection', function(socket){
-
+			console.log("]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]");
+			console.log(this.clients);
 
 			let peer = self.sockets.find(x => x.socket === socket.id);
 			console.log("peer connected: "+ peer.address);

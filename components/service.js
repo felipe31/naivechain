@@ -12,7 +12,6 @@ class Service {
 
 			var opt = d.toString().trim();
 			var x = opt.split(' ');
-
 			if (x[0] == "exit") {
 				process.exit(1);
 			} else if (x[0] == "search") {
