@@ -79,7 +79,7 @@ class Connection {
 
 			socket.on('disconnect', (result) => {
 				let index = self.sockets.findIndex(x => x.socket === socket.id);
-				console.log(index);
+				//console.log(index);
 				if (index !== -1) {
 					self.sockets.splice(index, 1);
 				}
@@ -238,7 +238,7 @@ class Connection {
 	}
 
 	messageToQueue(message){
-		this.messageToAdd.push([message]);
+		this.messageToAdd.push(message);
 		this.handleBlockchainResponse();
 	}
 
@@ -249,7 +249,7 @@ class Connection {
 			let self = this;
 			let message = self.messageToAdd.splice(0, 1);
 
-			let receivedBlocks = JSON.parse(message.data).sort((b1, b2) => (b1.index - b2.index));
+			let receivedBlocks = JSON.parse(message.data);
 
 			if(Object.keys(receivedBlocks).length == 1){
 
@@ -259,11 +259,12 @@ class Connection {
 
 					self._blockchain.appendBlock([latestBlockReceived]);
 				} else {
+					self._blockchain.lock = 0;
 					self.broadcast(self.queryAllMsg());
 					// the peer need to send all blocks
 				}
 			} else {
-				self._blockchain.mergeBlockChains(receivedBlocks, socketID);
+				self._blockchain.mergeBlockChains(receivedBlocks);
 			}
 		}
 	};

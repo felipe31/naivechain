@@ -199,7 +199,6 @@ class Blockchain {
 		let self = this;
 
 		let last = self.latestBlock;
-		let blocksCounter = 0;
 
 		let addblocks = [];
 		let firstHash = null;
@@ -222,47 +221,49 @@ class Blockchain {
 
 				last = blocks[i];
 
-				blocksCounter++;
 			} catch(e){ 
 				console.log("some block is not valid");
 			}
 		}
 
-		self.getAllBlocks().then(
-			blocks => {
+		if (Object.keys(addblocks).length != 0) {
 
-				if(value){
-				
-					for(let p in addblocks){
-						value[p] = addblocks[p];
+			self.getAllBlocks().then(
+				blocks => {
+
+					if(blocks){
+					
+						for(let p in addblocks){
+							blocks[p] = addblocks[p];
+						}
+
+						blocks[self.latestBlock.hash].nextHash = addblocks[firstHash].hash;
+						blocks[self.getGenesisBlock().hash].previoushash = last.hash;
+
 					}
 
-					value[self.latestBlock.hash].nextHash = addblocks[firstHash].hash;
-					value[self.getGenesisBlock().hash].previoushash = last.hash;
+					blocks = self._security.encryptSymmetric(JSON.stringify(blocks));
 
-				}
+					self._fs.writeFile('./data/data.txt', blocks, function (err) {
+						if (err) {
+							console.log("erro de escrita");
+						}
+					});
+					
+					self.latestBlock = last;
+					self._connection.broadcast(self._connection.responseLatestMsg());
+					
+					self.lock = 0;
 
-				value = self._security.encryptSymmetric(JSON.stringify(value));
-
-				self._fs.writeFile('./data/data.txt', value, function (err) {
-					if (err) {
-						console.log("erro de escrita");
+					if(self._connection.messageToAdd.length != 0){
+						self._connection.handleBlockchainResponse();
+					} else if (this.blocksToAdd.length != 0){
+						self.pushBlock();
 					}
-				});
-				
-				self.latestBlock = last;
-				self._connection.broadcast(self._connection.responseLatestMsg());
-				
-				self.lock = 0;
 
-				if(self._connection.messageToAdd.length != 0){
-					self._connection.handleBlockchainResponse();
-				} else if (this.blocksToAdd.length != 0){
-					self.pushBlock();
 				}
-
-			}
-		);
+			);
+		}
 	}
 
 	async pushBlock(){	
@@ -363,12 +364,12 @@ class Blockchain {
 					if(myLast.index > newLast.index){
 						
 						while(myLast.index != newLast.index){
-							newLast = newBlocks[newLast.previoushash];
+							myLast = myBlocks[myLast.previoushash];
 						}
 
 						if(myLast.hash == newLast.hash){
 							// blockchain correta, a nova está desatualizada, então só enviar
-							self._connection.broadcast(self._connection.queryAllMsg());
+							self._connection.broadcast(self._connection.responseChainMsg(myBlocks));
 
 							self.lock = 0;
 
@@ -383,7 +384,7 @@ class Blockchain {
 
 					} else {
 						while(myLast.index != newLast.index){
-							myLast = myBlocks[myLast.previoushash];
+							newLast = newBlocks[newLast.previoushash];
 						}
 
 						if(myLast.hash == newLast.hash){
