@@ -2,17 +2,14 @@
 
 var stdin = process.openStdin();
 
-
-
-
 class Service {
 
 	constructor(blockchain, fs) {
 		this._blockchain = blockchain;
 		this._fs = fs;
-		this.compareServiceLoop = setInterval(compareLogFunc(), 3000);
-
 		let self = this;
+		this.compareServiceLoop = setInterval(function(){self.compareLogFunc()}, 10000);
+
 		stdin.addListener("data", function(d) {
 
 			var opt = d.toString().trim();
@@ -26,19 +23,24 @@ class Service {
 				case "compare":
 					for(i = 1; x[i] !=  undefined; i++) {
 						caminho = x[i];
-						self.validaCaminho(caminho).then(
-							value => {
-								if (self.comparaLog(caminho)) {
+						if(self.validaCaminho(caminho)){
+							let result  = "";
+							self.comparaLog(caminho).then(
+								value => {
 									console.log("The logs have been verified with the blockchain");
-								} else {
+									result = "Logs successfully compared!";
+									let log ="The client ran a log compare: "+opt+" and the result was:\n"+result;
+									self._blockchain.addBlock(log,'', 1);	
+								}, error => {
 									console.log("The logs in blockchain do NOT correspond with the local logs")
-								}
-								let log ="The client ran a log compare: "+opt;
-								self._blockchain.addBlock(log,'', 1);
-							}, error => {
-								console.log("Caminho do log incorreto");
-							}
-						);
+									result = "Logs FAIL on compare!";
+									let log ="The client ran a log compare: "+opt+" and the result was:\n"+result;
+									self._blockchain.addBlock(log,'', 1);	
+								});
+							
+						} else {
+							console.log("Caminho do log incorreto");
+						}
 					}
 				break;
 
@@ -142,7 +144,7 @@ class Service {
 					console.log("\n\nUsage:");
 					console.log("\n\tsearch <option>\n\t\tSearch in the blockchain logs according to <option>, it is based\n\t\ton timestamp, creator, ip or public key.");
 					console.log("\n\tconnect <ip>\n\t\tConnect in the blockchain with the given ip(s).");
-					console.log("\n\tcompare <path>\n\t\tCompare the logs in the blockchain with the local logs of the given path(s).")
+					console.log("\n\tcompare <path> ...\n\t\tCompare the logs in the blockchain with the local logs of the given path(s).")
 					console.log("\n\texit\tExit the program.");
 					console.log("\n\thelp\tShow this information.");
 				break;
@@ -156,10 +158,10 @@ class Service {
 		var logFiles;
 		
 		try {
-			logFiles = fs.readFileSync('config', 'utf8');
+			logFiles = this._fs.readFileSync('config', 'utf8');
 		} catch(e){
 			console.log("Config cannot be open to compare");
-			process.exit(1);
+			// process.exit(1);
 		}
 
 		logFiles = JSON.parse(logFiles);
@@ -167,20 +169,28 @@ class Service {
 		for(var i = 0; i < logFiles.length; i++){
 			let self = this;
 			let file = logFiles[i];
+			let date = new Date();
 
-			this.comparaLog(file, 0, 1, 1).then(
+			if(!self.validaCaminho(file)){
+				console.log("The following path inside config file was not found:\n"+file);
+				continue;
+			}
+
+
+			let log ="The system ran a log compare on file: "+file+" and the result was:\n";
+
+			console.log("Executing automatic comparation on file:\n"+file);
+
+			date.setMinutes(date.getMinutes()-1);
+
+			this.comparaLog(file, date.getTime()).then(
 				value => {
-
-				}
-				);
-
-
-
-
-
-				let log ="The system ran a log compare on file: "+file+" and the result was:\n";
-				log = log + result;
-				self._blockchain.addBlock(log,'', 1);
+					log = log+"Logs successfully compared!";
+					self._blockchain.addBlock(log,'', 1);	
+				}, error => {
+					log = log+"Logs FAIL on compare!";
+					self._blockchain.addBlock(log,'', 1);	
+				});
 		}
 	}
 
@@ -189,25 +199,39 @@ class Service {
 		let self = this;
 
 		return new Promise(function(resolve, reject){
+
+			while(self._blockchain.lock == 1);
+
 			self.pesquisaLogFile(path, timestamp, function(result){
-				let logBlockchain = self.concatField(result, 'data');
+				if (result == null){ 
+					console.log("result == null");
+					resolve();
+				} else{
+					let logBlockchain = self.concatField(result, 'data');
 
 					self._fs.readFile(path, 'utf8', function(err, data){
 						if (err) {	
 							reject();
 						} else {
 							console.log(data);
-							console.log(logBlockchain)
-							if(data == logBlockchain){
-								console.log("resolve");
-								resolve();
-							} else{
-								console.log("reject");
+							console.log(logBlockchain);
+							if(data.length - logBlockchain.length <  0)
 								reject();
+							let j, i;
+							for (i = logBlockchain.length - 1, j = data.length - 1; i >= 0; i--, j--) {
+								if(logBlockchain[i] !== data[j])
+									reject();
 							}
+							console.log("resolve");
+							resolve();
+							// } else{
+							// 	console.log("reject");
+							// 	reject();
+							// }
 
 						}
 					});
+				}
 			});
 		});
 	}
@@ -386,15 +410,14 @@ class Service {
 			let currentHash = self._blockchain.getGenesisBlock().hash;
 
 			while(currentHash != null){
-				console.log(path);
-				if(blocks[currentHash]["file"] === path && blocks[currentHash].timestamp > timestamp){
+				if(blocks[currentHash].file === path && blocks[currentHash].timestamp > timestamp){
 					result.push(blocks[currentHash]);
 				}
 				currentHash = blocks[currentHash].nextHash;	
 			}
 
 			if(result.length < 1){	
-				console.log("No result found");
+				callback(null);
 
 			}else if(callback != undefined){
 				callback(result);

@@ -13,6 +13,7 @@ var ioClient = require('socket.io-client');
 var io = require('socket.io')(http);
 var tail = require('tail').Tail;
 
+
 var security = require('./components/security.js')(path, fs, x509, crypto);
 
 var Blockchain = require('./components/blockchain.js');
