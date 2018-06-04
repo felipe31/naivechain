@@ -257,7 +257,7 @@ class Connection {
 			let self = this;
 			let message = self.messageToAdd[0];
 			self.messageToAdd.splice(0, 1);
-			console.log(message);
+			//console.log(message);
 			console.log("lock");
 			let receivedBlocks = JSON.parse(message.data);
 
@@ -294,7 +294,7 @@ class Connection {
 	async questionBlock(block1, block2){
 		let self = this;
 		
-		let count0 = 0;
+		let count0 = 1;
 		let count1 = 0;
 		for (var i = self.clients.length - 1; i >= 0; i--) {
 			let send = self._security.encryptSymmetric(JSON.stringify([block1, block2]));

@@ -256,13 +256,7 @@ class Blockchain {
 					self.latestBlock = last;
 					self._connection.broadcast(self._connection.responseLatestMsg());
 					
-					self.lock = 0;
-
-					if(self._connection.messageToAdd.length != 0){
-						self._connection.handleBlockchainResponse();
-					} else if (this.blocksToAdd.length != 0){
-						self.pushBlock();
-					}
+					self.unlock();
 
 				}
 			);
@@ -302,7 +296,7 @@ class Blockchain {
 					last = block;
 					blocksCounter++;
 				} catch(e){ 
-						self.idx--;
+					self.idx--;
 				}
 			}
 			
@@ -335,13 +329,8 @@ class Blockchain {
 						self.latestBlock = last;
 						self._connection.broadcast(self._connection.responseLatestMsg());
 						
-						self.lock = 0;
-
-						if(self._connection.messageToAdd.length != 0){
-							self._connection.handleBlockchainResponse();
-						} else if (this.blocksToAdd.length != 0){
-							self.pushBlock();
-						}
+						console.log("deslock pushBlock");
+						self.unlock();
 						
 
 					}, error => {
@@ -373,14 +362,7 @@ class Blockchain {
 						if(myLast.hash == newLast.hash){
 							// blockchain correta, a nova está desatualizada, então só enviar
 							self._connection.broadcast(self._connection.responseChainMsg(myBlocks));
-
-							self.lock = 0;
-							console.log("2");
-							if(self._connection.messageToAdd.length != 0){
-								self._connection.handleBlockchainResponse();
-							} else if (this.blocksToAdd.length != 0){
-								self.pushBlock();
-							}
+							self.unlock();
 
 							return;
 						}
@@ -400,17 +382,11 @@ class Blockchain {
 								newsBlocksToAdd.push(newLast);
 							}
 
-							console.log("3");
+							
 							if(newsBlocksToAdd.length != 0){
 								self.appendBlock(newsBlocksToAdd);
 							} else {
-								self.lock = 0;
-
-								if(self._connection.messageToAdd.length != 0){
-									self._connection.handleBlockchainResponse();
-								} else if (this.blocksToAdd.length != 0){
-									self.pushBlock();
-								}
+								self.unlock();
 							}
 							return;
 						}
@@ -431,6 +407,7 @@ class Blockchain {
 							}
 						}
 
+
 						if(response == 0){
 							// minha blockchain está correta
 							let newsBlocksToAdd = [];
@@ -448,7 +425,6 @@ class Blockchain {
 									self.idx++;
 
 									newLast.index = self.idx;
-									console.log("------------------------------");
 									await self.isValidNewBlock(newLast, last);
 
 									if (Object.keys(newsBlocksToAdd).length != 0) {
@@ -463,10 +439,9 @@ class Blockchain {
 									self.idx--;
 								}
 
-								newLast = newBlocks[newLast.nextHash];
-								console.log(newLast);
+								newLast = newLast.nextHash == null ? null : newBlocks[newLast.nextHash];
 								
-							} while(newLast.nextHash != null);
+							} while(newLast != null);
 
 							if(Object.keys(newsBlocksToAdd).length != 0){
 
@@ -489,15 +464,9 @@ class Blockchain {
 								
 								self.latestBlock = last;
 								self._connection.broadcast(self._connection.responseLatestMsg());
-								
-								self.lock = 0;
-
-								if(self._connection.messageToAdd.length != 0){
-									self._connection.handleBlockchainResponse();
-								} else if (this.blocksToAdd.length != 0){
-									self.pushBlock();
-								}
 							}
+
+							self.unlock();
 
 
 						} else {
@@ -520,29 +489,35 @@ class Blockchain {
 
 									myLast.index = self.idx;
 									console.log("=====================================");
-									await self.isValidNewBlock(myLast, last);
+									//await self.isValidNewBlock(myLast, last);
 
 									if (Object.keys(newsBlocksToAdd).length != 0) {
 										newsBlocksToAdd[last.hash].nextHash = myLast.hash;
 									}
 									if(firstHash == null ) firstHash = myLast.hash;
 								
-									newsBlocksToAdd[newLast.hash] = newLast;
+									newsBlocksToAdd[myLast.hash] = myLast;
 									last = myLast;
 
 								} catch(e){
 									self.idx--;
 								}
+								if(myLast.nextHash != null){
 
-								myLast = myBlocks[myLast.nextHash];
+								}
+								myLast = myLast.nextHash == null ? null : myBlocks[myLast.nextHash];
 								
-							} while(myLast.nextHash != null);
+							} while(myLast != null);
 
 							if(Object.keys(newsBlocksToAdd).length != 0){
 
 								for(let p in newsBlocksToAdd){
 									newBlocks[p] = newsBlocksToAdd[p];
 								}
+								console.log("-1-1-1-1-1-1-1-1-1-1-1--1-1-1-1-1-1-");
+								console.log(firstHash);
+								console.log(newsBlocksToAdd);
+								console.log(newsBlocksToAdd[firstHash].hash);
 
 								newBlocks[newBlocks[newBlocks[self.getGenesisBlock().hash].previousHash].hash].nextHash = newsBlocksToAdd[firstHash].hash;
 								newBlocks[self.getGenesisBlock().hash].previousHash = last.hash;
@@ -559,15 +534,9 @@ class Blockchain {
 								
 								self.latestBlock = last;
 								self._connection.broadcast(self._connection.responseLatestMsg());
-								
-								self.lock = 0;
-
-								if(self._connection.messageToAdd.length != 0){
-									self._connection.handleBlockchainResponse();
-								} else if (this.blocksToAdd.length != 0){
-									self.pushBlock();
-								}
 							}
+
+							self.unlock();
 						}
 					} catch (e){
 						console.log(e);
@@ -578,8 +547,20 @@ class Blockchain {
 				console.log(e);
 				console.log("error file read");
 			}
+		} else {
+			this.unlock();
 		}
 	};
+
+	unlock(){
+		this.lock = 0;
+
+		if(this._connection.messageToAdd.length != 0){
+			this._connection.handleBlockchainResponse();
+		} else if (this.blocksToAdd.length != 0){
+			this.pushBlock();
+		}
+	}
 
 	async isValidChain(blockchainToValidate){
 		let self = this;
