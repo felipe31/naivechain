@@ -111,9 +111,9 @@ class Connection {
 					let dataDecrypted = JSON.parse(self._security.decryptSymmetric(result));
 					self._blockchain.getAllBlocks().then(
 						value => {
-							if(value[dataDecrypted[0].hash] !== undefined){
+							if(value[dataDecrypted[0].hash] !== undefined && dataDecrypted[0].index == value[dataDecrypted[0].hash].index){
 								fn(0);
-							} else if(value[dataDecrypted[1].hash] !== undefined){
+							} else if(value[dataDecrypted[1].hash] !== undefined && dataDecrypted[1].index == value[dataDecrypted[1].hash].index){
 								fn(1);
 							} else {
 								fn(-1);
@@ -300,8 +300,13 @@ class Connection {
 
 		for (var i = self.clients.length - 1; i >= 0; i--) {
 			let send = self._security.encryptSymmetric(JSON.stringify([block1, block2]));
-				
-			let res = await self.receiveQuestion(self.clients[i].client, send);
+			let res = -1;
+			try{
+				res = await self.receiveQuestion(self.clients[i].client, send);	
+			} catch(e){
+				console.log(e);
+				console.log("error question");
+			}
 
 			if(res == 0){
 				count0++;
@@ -309,6 +314,7 @@ class Connection {
 				count1++;
 			}
 		}
+
 		console.log("questionBlock");
 		console.log(count0);
 		console.log(count1);
@@ -324,13 +330,20 @@ class Connection {
 	receiveQuestion(clientToSend, send){
 
 		return new Promise(function(resolve, reject) {
+
 			clientToSend.emit('check', send, function (data) { 
 				if(data == 0){
 			    	resolve(0);
 			    } else if (data == 1){
 			    	resolve(1);
+			    } else {
+			    	resolve(-1);
 			    }
 			});
+			// Set up the timeout
+	        setTimeout(function() {
+	            resolve(-1);
+	        }, 1000);
 		});
 	}
 

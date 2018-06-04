@@ -408,7 +408,10 @@ class Blockchain {
 				}
 				try{
 					console.log("4");
-					//console.log(self._connection);
+					console.log("myLast");
+					console.log(myLast);
+					console.log("newLast");
+					console.log(newLast);
 					let response = await self._connection.questionBlock(myLast, newLast);
 					console.log(response);
 					console.log(myLast.timestamp);
