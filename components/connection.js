@@ -174,7 +174,7 @@ class Connection {
 
 	connectAddress(address){
 
-		if(!this.clients.find(x => x.address === address.address)) {
+		if((!this.clients.find(x => x.address === address.address)) && (address.address != this._ip.address())) {
 			let client;
 			let data = this._security.encryptSymmetric(JSON.stringify({publicKey: this._security.publicKey}));
 
@@ -296,9 +296,11 @@ class Connection {
 		
 		let count0 = 1;
 		let count1 = 0;
+		console.log(self.clients);
+
 		for (var i = self.clients.length - 1; i >= 0; i--) {
 			let send = self._security.encryptSymmetric(JSON.stringify([block1, block2]));
-			
+				
 			let res = await self.receiveQuestion(self.clients[i].client, send);
 
 			if(res == 0){
@@ -320,9 +322,10 @@ class Connection {
 	}
 
 	receiveQuestion(clientToSend, send){
+
 		return new Promise(function(resolve, reject) {
 			clientToSend.emit('check', send, function (data) { 
-				    if(data == 0){
+				if(data == 0){
 			    	resolve(0);
 			    } else if (data == 1){
 			    	resolve(1);
