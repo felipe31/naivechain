@@ -2,11 +2,15 @@
 
 var stdin = process.openStdin();
 
+
+
+
 class Service {
 
 	constructor(blockchain, fs) {
 		this._blockchain = blockchain;
 		this._fs = fs;
+		this.compareServiceLoop = setInterval(compareLogFunc(), 3000);
 
 		let self = this;
 		stdin.addListener("data", function(d) {
@@ -27,9 +31,10 @@ class Service {
 								if (self.comparaLog(caminho)) {
 									console.log("The logs have been verified with the blockchain");
 								} else {
-									console.log("The logs in blockchain do NOT correspond with the local logs");
-
+									console.log("The logs in blockchain do NOT correspond with the local logs")
 								}
+								let log ="The client ran a log compare: "+opt;
+								self._blockchain.addBlock(log,'', 1);
 							}, error => {
 								console.log("Caminho do log incorreto");
 							}
@@ -147,15 +152,48 @@ class Service {
 	}
 
 
-	comparaLog(path){
+	compareLogFunc(){
+		var logFiles;
+		
+		try {
+			logFiles = fs.readFileSync('config', 'utf8');
+		} catch(e){
+			console.log("Config cannot be open to compare");
+			process.exit(1);
+		}
+
+		logFiles = JSON.parse(logFiles);
+
+		for(var i = 0; i < logFiles.length; i++){
+			let self = this;
+			let file = logFiles[i];
+
+			this.comparaLog(file, 0, 1, 1).then(
+				value => {
+
+				}
+				);
+
+
+
+
+
+				let log ="The system ran a log compare on file: "+file+" and the result was:\n";
+				log = log + result;
+				self._blockchain.addBlock(log,'', 1);
+		}
+	}
+
+
+	comparaLog(path, timestamp){
 		let self = this;
 
 		return new Promise(function(resolve, reject){
-			self.pesquisaLogFile(path, function(result){
+			self.pesquisaLogFile(path, timestamp, function(result){
 				let logBlockchain = self.concatField(result, 'data');
 
 					self._fs.readFile(path, 'utf8', function(err, data){
-						if (err) {
+						if (err) {	
 							reject();
 						} else {
 							console.log(data);
@@ -335,9 +373,12 @@ class Service {
 		});
 	}
 
-	pesquisaLogFile(path, callback){
+	pesquisaLogFile(path, timestamp, callback){
 		if(callback == undefined)
 			console.log("Follows the result of your search by file");
+		if(timestamp == undefined)
+			timestamp = 0;
+
 		let self = this;
 		this._blockchain.getAllBlocks().then(function (blocks){
 			var result = [];
@@ -346,7 +387,7 @@ class Service {
 
 			while(currentHash != null){
 				console.log(path);
-				if(blocks[currentHash]["file"] === path){
+				if(blocks[currentHash]["file"] === path && blocks[currentHash].timestamp > timestamp){
 					result.push(blocks[currentHash]);
 				}
 				currentHash = blocks[currentHash].nextHash;	
