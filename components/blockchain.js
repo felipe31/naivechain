@@ -63,7 +63,7 @@ class Blockchain {
 
 	startChain(){
 		let genesis = this.getGenesisBlock();
-		let genesis.previousHash = genesis.hash;
+		genesis.previousHash = genesis.hash;
 		let value = new Object();
 		value[genesis.hash] = genesis;
 
@@ -430,7 +430,7 @@ class Blockchain {
 								response = 0;
 							}
 						}
-						
+
 						if(response == 0){
 							// minha blockchain está correta
 							let newsBlocksToAdd = [];
