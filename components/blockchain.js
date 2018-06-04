@@ -237,6 +237,7 @@ class Blockchain {
 							blocks[p] = addblocks[p];
 						}
 
+						self.idx = last.index;
 						blocks[self.latestBlock.hash].nextHash = addblocks[firstHash].hash;
 						blocks[self.getGenesisBlock().hash].previousHash = last.hash;
 
@@ -352,7 +353,7 @@ class Blockchain {
 
 	async mergeBlockChains(newBlocks){
 		let self = this;
-
+		console.log("1");
 		if(self.isValidChain(newBlocks)){
 
 			try{
@@ -372,7 +373,7 @@ class Blockchain {
 							self._connection.broadcast(self._connection.responseChainMsg(myBlocks));
 
 							self.lock = 0;
-
+							console.log("2");
 							if(self._connection.messageToAdd.length != 0){
 								self._connection.handleBlockchainResponse();
 							} else if (this.blocksToAdd.length != 0){
@@ -393,11 +394,22 @@ class Blockchain {
 							let newsBlocksToAdd = [];
 
 							while(newLast.nextHash != null){
-								newLast = myBlocks[newLast.nextHash];
+								newLast = newBlocks[newLast.nextHash];
 								newsBlocksToAdd.push(newLast);
 							}
 
-							if(newsBlocksToAdd != 0) self.appendBlock(newsBlocksToAdd);
+							console.log("3");
+							if(newsBlocksToAdd.length != 0){
+								self.appendBlock(newsBlocksToAdd);
+							} else {
+								self.lock = 0;
+
+								if(self._connection.messageToAdd.length != 0){
+									self._connection.handleBlockchainResponse();
+								} else if (this.blocksToAdd.length != 0){
+									self.pushBlock();
+								}
+							}
 							return;
 						}
 					}
@@ -407,7 +419,8 @@ class Blockchain {
 						newLast = newBlocks[newLast.previousHash];
 					}
 					try{
-						let response = await self._connection.questionBlock(myLast, newLast);
+						console.log("4");
+						let response = self._connection.questionBlock(myLast, newLast);
 						if(response == 0){
 							// minha blockchain está correta
 							let newsBlocksToAdd = [];
@@ -433,7 +446,7 @@ class Blockchain {
 									}
 									if(firstHash == null ) firstHash = newLast.hash;
 								
-									newsBlocksToAdd.push(newLast);
+									newsBlocksToAdd[newLast.hash] = newLast;
 									last = newLast;
 
 								} catch(e){
@@ -441,6 +454,7 @@ class Blockchain {
 								}
 
 								newLast = newBlocks[newLast.nextHash];
+								console.log(newLast);
 								
 							} while(newLast.nextHash != null);
 
@@ -452,7 +466,7 @@ class Blockchain {
 
 								myBlocks[self.latestBlock.hash].nextHash = newsBlocksToAdd[firstHash].hash;
 								myBlocks[self.getGenesisBlock().hash].previousHash = last.hash;
-
+								myBlocks[last.hash].nextHash = null;
 							
 
 								myBlocks = self._security.encryptSymmetric(JSON.stringify(myBlocks));
@@ -503,7 +517,7 @@ class Blockchain {
 									}
 									if(firstHash == null ) firstHash = myLast.hash;
 								
-									newsBlocksToAdd.push(myLast);
+									newsBlocksToAdd[newLast.hash] = newLast;
 									last = myLast;
 
 								} catch(e){
@@ -522,7 +536,7 @@ class Blockchain {
 
 									newBlocks[newBlocks[newBlocks[self.getGenesisBlock().hash].previousHash].hash].nextHash = newsBlocksToAdd[firstHash].hash;
 									newBlocks[self.getGenesisBlock().hash].previousHash = last.hash;
-
+									newBlocks[last.hash].nextHash = null;
 								
 
 								newBlocks = self._security.encryptSymmetric(JSON.stringify(newBlocks));
@@ -546,6 +560,7 @@ class Blockchain {
 							}
 						}
 					} catch (e){
+						console.log(e);
 						console.log("error connection");
 					}
 

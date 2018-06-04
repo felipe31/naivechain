@@ -27,7 +27,7 @@ class Connection {
 		let self = this;
 		
 
-		this._io.use(function (socket, next) {
+		self._io.use(function (socket, next) {
 			let data = socket.handshake.query.data;
 				try {
 					let address = socket.request.connection.remoteAddress;
@@ -69,7 +69,7 @@ class Connection {
 				}
 		});
 
-		this._io.on('connection', function(socket){
+		self._io.on('connection', function(socket){
 
 			let peer = self.sockets.find(x => x.socket === socket.id);
 			console.log("peer connected: "+ peer.address);
@@ -109,17 +109,20 @@ class Connection {
 			socket.on('check', function(result, fn) {
 			    try {
 					let dataDecrypted = JSON.parse(self._security.decryptSymmetric(result));
-					this._blockchain.getAllBlocks.then(value => {
-						if(value[dataDecrypted[0].hash] !== undefined){
-							fn(0);
-						} else if(value[dataDecrypted[1].hash] !== undefined){
-							fn(1);
-						} else {
-							fn(-1);
+					self._blockchain.getAllBlocks().then(
+						value => {
+							if(value[dataDecrypted[0].hash] !== undefined){
+								fn(0);
+							} else if(value[dataDecrypted[1].hash] !== undefined){
+								fn(1);
+							} else {
+								fn(-1);
+							}
 						}
-					})
+					)
 
 				} catch (err){
+					console.log(err);
 					console.log("package damaged server");
 				}
 			    
@@ -137,7 +140,7 @@ class Connection {
 			'type': MessageType.RESPONSE_BLOCKCHAIN,
 			'data': JSON.stringify([this._blockchain.latestBlock])
 		}
-
+		console.log(this._blockchain.latestBlock);
 		return JSON.stringify(data);
 	}
 
@@ -250,10 +253,12 @@ class Connection {
 
 		if(this._blockchain.lock == 0 && this.messageToAdd.length != 0){
 			this._blockchain.lock = 1;
+
 			let self = this;
 			let message = self.messageToAdd[0];
 			self.messageToAdd.splice(0, 1);
-
+			console.log(message);
+			console.log("lock");
 			let receivedBlocks = JSON.parse(message.data);
 
 			if(Object.keys(receivedBlocks).length == 1){
@@ -286,25 +291,39 @@ class Connection {
 		}
 	}
 
-	questionBlock(block1, block2){
+	async questionBlock(block1, block2){
+		let self = this;
+		
+		let count0 = 0;
+		let count1 = 0;
+		for (var i = self.clients.length - 1; i >= 0; i--) {
+			let send = self._security.encryptSymmetric(JSON.stringify([block1, block2]));
+			
+			let res = await self.receiveQuestion(self.clients[i].client, send);
+
+			if(res == 0){
+				count0++;
+			} else if(res == 1){
+				count1++;
+			}
+		}
+		
+		if(count0 >= count1){
+			return 0;
+		} else {
+			return 1;
+		}
+	}
+
+	receiveQuestion(clientToSend, send){
 		return new Promise(function(resolve, reject) {
-			let count0 = 0;
-			let count1 = 0;
-			for (var i = this.clients.length - 1; i >= 0; i--) {
-				let send = this._security.encryptSymmetric(JSON.stringify([block1, block2]));
-				this.clients[i].emit('check', send, function (data) { 
+			clientToSend.emit('check', send, function (data) { 
 				    if(data == 0){
-				    	count0++;
-				    } else if (data == 1){
-				    	count1++;
-				    }
-				});
-			}
-			if(count0 >= count1){
-				resolve(0);
-			} else {
-				resolve(1);
-			}
+			    	resolve(0);
+			    } else if (data == 1){
+			    	resolve(1);
+			    }
+			});
 		});
 	}
 
