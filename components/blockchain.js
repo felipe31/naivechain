@@ -471,6 +471,7 @@ class Blockchain {
 							myBlocks[self.getGenesisBlock().hash].previousHash = last.hash;
 							myBlocks[last.hash].nextHash = null;
 						
+							self._connection.broadcast(self._connection.responseChainMsg(myBlocks));
 
 							myBlocks = self._security.encryptSymmetric(JSON.stringify(myBlocks));
 
@@ -481,7 +482,6 @@ class Blockchain {
 							});
 							
 							self.latestBlock = last;
-							self._connection.broadcast(self._connection.responseLatestMsg());
 						}
 
 						self.unlock();
@@ -541,6 +541,7 @@ class Blockchain {
 							newBlocks[self.getGenesisBlock().hash].previousHash = last.hash;
 							newBlocks[last.hash].nextHash = null;
 							
+							self._connection.broadcast(self._connection.responseChainMsg(newBlocks));
 
 							newBlocks = self._security.encryptSymmetric(JSON.stringify(newBlocks));
 
@@ -551,7 +552,7 @@ class Blockchain {
 							});
 							
 							self.latestBlock = last;
-							self._connection.broadcast(self._connection.responseLatestMsg());
+							
 						}
 
 						self.unlock();
