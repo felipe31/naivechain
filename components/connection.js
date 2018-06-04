@@ -307,6 +307,9 @@ class Connection {
 				count1++;
 			}
 		}
+		console.log("questionBlock");
+		console.log(count0);
+		console.log(count1);
 		if(count0 == count1){
 			return -1;
 		} else if(count0 > count1){

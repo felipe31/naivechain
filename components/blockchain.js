@@ -399,6 +399,10 @@ class Blockchain {
 					try{
 						console.log("4");
 						let response = await self._connection.questionBlock(myLast, newLast);
+						console.log(response);
+						console.log(myLast.timestamp);
+						console.log(newLast.timestamp);
+						console.log(newBlocks);
 						if(response == -1){
 							if(myLast.timestamp > newLast.timestamp){
 								response = 1;
@@ -440,7 +444,7 @@ class Blockchain {
 								}
 
 								newLast = newLast.nextHash == null ? null : newBlocks[newLast.nextHash];
-								
+
 							} while(newLast != null);
 
 							if(Object.keys(newsBlocksToAdd).length != 0){
@@ -489,7 +493,7 @@ class Blockchain {
 
 									myLast.index = self.idx;
 									console.log("=====================================");
-									//await self.isValidNewBlock(myLast, last);
+
 
 									if (Object.keys(newsBlocksToAdd).length != 0) {
 										newsBlocksToAdd[last.hash].nextHash = myLast.hash;
@@ -502,9 +506,7 @@ class Blockchain {
 								} catch(e){
 									self.idx--;
 								}
-								if(myLast.nextHash != null){
 
-								}
 								myLast = myLast.nextHash == null ? null : myBlocks[myLast.nextHash];
 								
 							} while(myLast != null);
@@ -519,6 +521,8 @@ class Blockchain {
 								console.log(newsBlocksToAdd);
 								console.log(newsBlocksToAdd[firstHash].hash);
 
+								console.log(firstHash);
+								console.log(newsBlocksToAdd);
 								newBlocks[newBlocks[newBlocks[self.getGenesisBlock().hash].previousHash].hash].nextHash = newsBlocksToAdd[firstHash].hash;
 								newBlocks[self.getGenesisBlock().hash].previousHash = last.hash;
 								newBlocks[last.hash].nextHash = null;
