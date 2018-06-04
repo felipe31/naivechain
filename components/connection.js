@@ -229,11 +229,11 @@ class Connection {
 
 			client.on('disconnect', function () {
 				
-				let index = self.clients.findIndex(x => x.address === address.address);
-				//console.log(index);
-				if (index !== -1) {
-					self.clients.splice(index, 1);
-				}
+				// let index = self.clients.findIndex(x => x.address === address.address);
+				// //console.log(index);
+				// if (index !== -1) {
+				// 	self.clients.splice(index, 1);
+				// }
 				console.log("one peer disconnected");
 			});
 

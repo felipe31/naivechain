@@ -260,6 +260,8 @@ class Blockchain {
 
 				}
 			);
+		} else {
+			self.unlock();
 		}
 	}
 
@@ -338,6 +340,8 @@ class Blockchain {
 						// console.log(error);
 					}
 				)
+			} else {
+				self.unlock();
 			}
 		}
 	}
