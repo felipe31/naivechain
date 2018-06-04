@@ -257,7 +257,7 @@ class Connection {
 			let self = this;
 			let message = self.messageToAdd[0];
 			self.messageToAdd.splice(0, 1);
-			console.log(message);
+			//console.log(message);
 			console.log("lock");
 			let receivedBlocks = JSON.parse(message.data);
 
