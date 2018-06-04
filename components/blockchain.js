@@ -31,8 +31,7 @@ class Blockchain {
 
 		this.getAllBlocks().then(
 			value => {
-				let valid = await self.isValidChain(newBlocks);
-				if(value && valid){
+				if(value && this.isValidChain(value)){
 					this.latestBlock = this.getLastBlock(value);
 					this.idx = this.latestBlock.index;
 				} else {
@@ -350,8 +349,9 @@ class Blockchain {
 	async mergeBlockChains(newBlocks){
 		let self = this;
 		console.log("1");
-		let valid = await self.isValidChain(newBlocks);
-		if(valid){
+		let valid = self.isValidChain(newBlocks);
+		console.log(valid);
+		if(newBlocks != "" && valid){
 
 			try{
 				let myBlocks = await self.getAllBlocks();
