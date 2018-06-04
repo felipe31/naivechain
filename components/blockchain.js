@@ -31,7 +31,8 @@ class Blockchain {
 
 		this.getAllBlocks().then(
 			value => {
-				if(value && this.isValidChain(value)){
+				let valid = await self.isValidChain(newBlocks);
+				if(value && valid){
 					this.latestBlock = this.getLastBlock(value);
 					this.idx = this.latestBlock.index;
 				} else {
@@ -349,207 +350,213 @@ class Blockchain {
 	async mergeBlockChains(newBlocks){
 		let self = this;
 		console.log("1");
-		if(self.isValidChain(newBlocks)){
+		let valid = await self.isValidChain(newBlocks);
+		if(valid){
 
 			try{
 				let myBlocks = await self.getAllBlocks();
 				let myLast = this.latestBlock;
-					let newLast = newBlocks[newBlocks[self.getGenesisBlock().hash].previousHash];
+				console.log("------");
+				console.log(newBlocks);
+				console.log(newBlocks[self.getGenesisBlock().hash]);
+				console.log("------================================");
+				let newLast = newBlocks[newBlocks[self.getGenesisBlock().hash].previousHash];
 
-					// Achar o ponto comum 
-					if(myLast.index > newLast.index){
-						
-						while(myLast.index != newLast.index){
-							myLast = myBlocks[myLast.previousHash];
-						}
-
-						if(myLast.hash == newLast.hash){
-							// blockchain correta, a nova está desatualizada, então só enviar
-							self._connection.broadcast(self._connection.responseChainMsg(myBlocks));
-							self.unlock();
-
-							return;
-						}
-
-					} else {
-						while(myLast.index != newLast.index){
-							newLast = newBlocks[newLast.previousHash];
-						}
-
-						if(myLast.hash == newLast.hash){
-							// blockchain atrasada, só atualizar
-
-							let newsBlocksToAdd = [];
-
-							while(newLast.nextHash != null){
-								newLast = newBlocks[newLast.nextHash];
-								newsBlocksToAdd.push(newLast);
-							}
-
-							
-							if(newsBlocksToAdd.length != 0){
-								self.appendBlock(newsBlocksToAdd);
-							} else {
-								self.unlock();
-							}
-							return;
-						}
+				// Achar o ponto comum 
+				if(myLast.index > newLast.index){
+					
+					while(myLast.index != newLast.index){
+						myLast = myBlocks[myLast.previousHash];
 					}
 
-					while(myLast.previousHash != newLast.previousHash){
-						myLast = myBlocks[myLast.previousHash];
+					if(myLast.hash == newLast.hash){
+						// blockchain correta, a nova está desatualizada, então só enviar
+						self._connection.broadcast(self._connection.responseChainMsg(myBlocks));
+						self.unlock();
+
+						return;
+					}
+
+				} else {
+					while(myLast.index != newLast.index){
 						newLast = newBlocks[newLast.previousHash];
 					}
-					try{
-						console.log("4");
-						let response = await self._connection.questionBlock(myLast, newLast);
-						console.log(response);
-						console.log(myLast.timestamp);
-						console.log(newLast.timestamp);
-						console.log(newBlocks);
-						if(response == -1){
-							if(myLast.timestamp > newLast.timestamp){
-								response = 1;
-							} else {
-								response = 0;
-							}
+
+					if(myLast.hash == newLast.hash){
+						// blockchain atrasada, só atualizar
+
+						let newsBlocksToAdd = [];
+
+						while(newLast.nextHash != null){
+							newLast = newBlocks[newLast.nextHash];
+							newsBlocksToAdd.push(newLast);
 						}
 
+						
+						if(newsBlocksToAdd.length != 0){
+							self.appendBlock(newsBlocksToAdd);
+						} else {
+							self.unlock();
+						}
+						return;
+					}
+				}
 
-						if(response == 0){
-							// minha blockchain está correta
-							let newsBlocksToAdd = [];
+				while(myLast.previousHash != newLast.previousHash){
+					myLast = myBlocks[myLast.previousHash];
+					newLast = newBlocks[newLast.previousHash];
+				}
+				try{
+					console.log("4");
+					//console.log(self._connection);
+					let response = await self._connection.questionBlock(myLast, newLast);
+					console.log(response);
+					console.log(myLast.timestamp);
+					console.log(newLast.timestamp);
+					//console.log(newBlocks);
+					if(response == -1){
+						if(myLast.timestamp > newLast.timestamp){
+							response = 1;
+						} else {
+							response = 0;
+						}
+					}
 
-							let last = self.latestBlock;
-							let firstHash = null;
 
-							do {
+					if(response == 0){
+						// minha blockchain está correta
+						let newsBlocksToAdd = [];
 
-								try{
-									last.nextHash = newLast.hash;
+						let last = self.latestBlock;
+						let firstHash = null;
 
-									newLast.previousHash = last.hash;
+						do {
 
-									self.idx++;
+							try{
+								last.nextHash = newLast.hash;
 
-									newLast.index = self.idx;
-									await self.isValidNewBlock(newLast, last);
+								newLast.previousHash = last.hash;
 
-									if (Object.keys(newsBlocksToAdd).length != 0) {
-										newsBlocksToAdd[last.hash].nextHash = newLast.hash;
-									}
-									if(firstHash == null ) firstHash = newLast.hash;
-								
-									newsBlocksToAdd[newLast.hash] = newLast;
-									last = newLast;
+								self.idx++;
 
-								} catch(e){
-									self.idx--;
+								newLast.index = self.idx;
+								await self.isValidNewBlock(newLast, last);
+
+								if (Object.keys(newsBlocksToAdd).length != 0) {
+									newsBlocksToAdd[last.hash].nextHash = newLast.hash;
 								}
+								if(firstHash == null ) firstHash = newLast.hash;
+							
+								newsBlocksToAdd[newLast.hash] = newLast;
+								last = newLast;
 
-								newLast = newLast.nextHash == null ? null : newBlocks[newLast.nextHash];
+							} catch(e){
+								self.idx--;
+							}
 
-							} while(newLast != null);
+							newLast = newLast.nextHash == null ? null : newBlocks[newLast.nextHash];
 
-							if(Object.keys(newsBlocksToAdd).length != 0){
+						} while(newLast != null);
 
-								for(let p in newsBlocksToAdd){
-									myBlocks[p] = newsBlocksToAdd[p];
+						if(Object.keys(newsBlocksToAdd).length != 0){
+
+							for(let p in newsBlocksToAdd){
+								myBlocks[p] = newsBlocksToAdd[p];
+							}
+
+							myBlocks[self.latestBlock.hash].nextHash = newsBlocksToAdd[firstHash].hash;
+							myBlocks[self.getGenesisBlock().hash].previousHash = last.hash;
+							myBlocks[last.hash].nextHash = null;
+						
+
+							myBlocks = self._security.encryptSymmetric(JSON.stringify(myBlocks));
+
+							self._fs.writeFile('./data/data.txt', myBlocks, function (err) {
+								if (err) {
+									console.log("erro de escrita");
 								}
+							});
+							
+							self.latestBlock = last;
+							self._connection.broadcast(self._connection.responseLatestMsg());
+						}
 
-								myBlocks[self.latestBlock.hash].nextHash = newsBlocksToAdd[firstHash].hash;
-								myBlocks[self.getGenesisBlock().hash].previousHash = last.hash;
-								myBlocks[last.hash].nextHash = null;
+						self.unlock();
+
+
+					} else {
+						// minha blockchain está errada
+
+						let newsBlocksToAdd = [];
+
+						let last = newBlocks[newBlocks[self.getGenesisBlock().hash].previousHash];
+						let firstHash = null;
+						self.idx = last.index;
+
+						do {
+
+							try{
+								last.nextHash = myLast.hash;
+
+								myLast.previousHash = last.hash;
+
+								self.idx++;
+
+								myLast.index = self.idx;
+								console.log("=====================================");
+
+
+								if (Object.keys(newsBlocksToAdd).length != 0) {
+									newsBlocksToAdd[last.hash].nextHash = myLast.hash;
+								}
+								if(firstHash == null ) firstHash = myLast.hash;
+							
+								newsBlocksToAdd[myLast.hash] = myLast;
+								last = myLast;
+
+							} catch(e){
+								self.idx--;
+							}
+
+							myLast = myLast.nextHash == null ? null : myBlocks[myLast.nextHash];
+							
+						} while(myLast != null);
+
+						if(Object.keys(newsBlocksToAdd).length != 0){
+
+							for(let p in newsBlocksToAdd){
+								newBlocks[p] = newsBlocksToAdd[p];
+							}
+							console.log("-1-1-1-1-1-1-1-1-1-1-1--1-1-1-1-1-1-");
+							console.log(firstHash);
+							console.log(newsBlocksToAdd);
+							console.log(newsBlocksToAdd[firstHash].hash);
+
+							console.log(firstHash);
+							console.log(newsBlocksToAdd);
+							newBlocks[newBlocks[newBlocks[self.getGenesisBlock().hash].previousHash].hash].nextHash = newsBlocksToAdd[firstHash].hash;
+							newBlocks[self.getGenesisBlock().hash].previousHash = last.hash;
+							newBlocks[last.hash].nextHash = null;
 							
 
-								myBlocks = self._security.encryptSymmetric(JSON.stringify(myBlocks));
+							newBlocks = self._security.encryptSymmetric(JSON.stringify(newBlocks));
 
-								self._fs.writeFile('./data/data.txt', myBlocks, function (err) {
-									if (err) {
-										console.log("erro de escrita");
-									}
-								});
-								
-								self.latestBlock = last;
-								self._connection.broadcast(self._connection.responseLatestMsg());
-							}
-
-							self.unlock();
-
-
-						} else {
-							// minha blockchain está errada
-
-							let newsBlocksToAdd = [];
-
-							let last = newBlocks[newBlocks[self.getGenesisBlock().hash].previousHash];
-							let firstHash = null;
-							self.idx = last.index;
-
-							do {
-
-								try{
-									last.nextHash = myLast.hash;
-
-									myLast.previousHash = last.hash;
-
-									self.idx++;
-
-									myLast.index = self.idx;
-									console.log("=====================================");
-
-
-									if (Object.keys(newsBlocksToAdd).length != 0) {
-										newsBlocksToAdd[last.hash].nextHash = myLast.hash;
-									}
-									if(firstHash == null ) firstHash = myLast.hash;
-								
-									newsBlocksToAdd[myLast.hash] = myLast;
-									last = myLast;
-
-								} catch(e){
-									self.idx--;
+							self._fs.writeFile('./data/data.txt', newBlocks, function (err) {
+								if (err) {
+									console.log("erro de escrita");
 								}
-
-								myLast = myLast.nextHash == null ? null : myBlocks[myLast.nextHash];
-								
-							} while(myLast != null);
-
-							if(Object.keys(newsBlocksToAdd).length != 0){
-
-								for(let p in newsBlocksToAdd){
-									newBlocks[p] = newsBlocksToAdd[p];
-								}
-								console.log("-1-1-1-1-1-1-1-1-1-1-1--1-1-1-1-1-1-");
-								console.log(firstHash);
-								console.log(newsBlocksToAdd);
-								console.log(newsBlocksToAdd[firstHash].hash);
-
-								console.log(firstHash);
-								console.log(newsBlocksToAdd);
-								newBlocks[newBlocks[newBlocks[self.getGenesisBlock().hash].previousHash].hash].nextHash = newsBlocksToAdd[firstHash].hash;
-								newBlocks[self.getGenesisBlock().hash].previousHash = last.hash;
-								newBlocks[last.hash].nextHash = null;
-								
-
-								newBlocks = self._security.encryptSymmetric(JSON.stringify(newBlocks));
-
-								self._fs.writeFile('./data/data.txt', newBlocks, function (err) {
-									if (err) {
-										console.log("erro de escrita");
-									}
-								});
-								
-								self.latestBlock = last;
-								self._connection.broadcast(self._connection.responseLatestMsg());
-							}
-
-							self.unlock();
+							});
+							
+							self.latestBlock = last;
+							self._connection.broadcast(self._connection.responseLatestMsg());
 						}
-					} catch (e){
-						console.log(e);
-						console.log("error connection");
+
+						self.unlock();
 					}
+				} catch (e){
+					console.log(e);
+					console.log("error connection");
+				}
 
 			} catch (e){
 				console.log(e);
