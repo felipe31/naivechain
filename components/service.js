@@ -8,7 +8,7 @@ class Service {
 		this._blockchain = blockchain;
 		this._fs = fs;
 		let self = this;
-		this.compareServiceLoop = setInterval(function(){self.compareLogFunc()}, 10000);
+		this.compareServiceLoop = setInterval(function(){self.compareLogFunc()}, 30000);
 
 		stdin.addListener("data", function(d) {
 
@@ -39,7 +39,7 @@ class Service {
 								});
 							
 						} else {
-							console.log("Caminho do log incorreto");
+							console.log("The path is invalid");
 						}
 					}
 				break;
@@ -77,7 +77,7 @@ class Service {
 								// Onde pesquisaLogData() retorna Log com a data correspondente;
 								self.pesquisaLogData(composedDateStart.getTime(), composedDateEnd.getTime());
 							} else {
-								console.log("Parâmetro data incorreto");
+								console.log("The parameter is invalid");
 							}
 						break;
 
@@ -91,7 +91,8 @@ class Service {
 								// Onde pesquisaLogPK() retorna Log com a PK correpondente;
 								self.pesquisaLogPK(caminho);
 							} else {
-								console.log("Caminho da Chave Pública incorreto");
+								console.log("The path is invalid");
+								//console.log("Caminho da Chave Pública incorreto");
 							}
 						break;
 
@@ -109,7 +110,7 @@ class Service {
 								self._blockchain.addBlock(log,'', 1);
 								self.pesquisaLogCriador(criador);
 							} else {
-								console.log("Criador incorreto");
+								console.log("The creator is invalid");
 							} 
 						break;
 
@@ -123,7 +124,7 @@ class Service {
 								self._blockchain.addBlock(log,'', 1);
 								self.pesquisaLogIp(ip);
 							} else {
-								console.log("Ip incorreto");
+								console.log("The ip is invalid");
 							} 
 						break;
 
@@ -204,7 +205,7 @@ class Service {
 
 			self.pesquisaLogFile(path, timestamp, function(result){
 				if (result == null){ 
-					console.log("result == null");
+					//console.log("result == null");
 					resolve();
 				} else{
 					let logBlockchain = self.concatField(result, 'data');
@@ -213,8 +214,8 @@ class Service {
 						if (err) {	
 							reject();
 						} else {
-							console.log(data);
-							console.log(logBlockchain);
+							//console.log(data);
+							//console.log(logBlockchain);
 							if(data.length - logBlockchain.length <  0)
 								reject();
 							let j, i;
@@ -222,7 +223,7 @@ class Service {
 								if(logBlockchain[i] !== data[j])
 									reject();
 							}
-							console.log("resolve");
+							//console.log("resolve");
 							resolve();
 							// } else{
 							// 	console.log("reject");

@@ -40,8 +40,7 @@ class Blockchain {
 							this.startChain();
 						},
 						error => {
-							console.log(error); // Error!
-							console.log("erro excluir arquivos");
+							console.log("error path data");
 						}
 					);
 				}
@@ -71,11 +70,11 @@ class Blockchain {
 
 		this._fs.writeFile('./data/data.txt', value, function (err) {
 			if (err) {
-				console.log("erro de escrita");
+				console.log("error path data");
 			}
 		});
 
-		console.log('genesis add');
+		////console.log('genesis add');
 
 		this.latestBlock = genesis;
 	}
@@ -143,28 +142,28 @@ class Blockchain {
 		return new Promise(function(resolve, reject) {
 
 			if (previousBlock.index + 1 !== newBlock.index) {
-				console.log('invalid index');
+				//console.log('invalid index');
 				reject();
 			} else if (previousBlock.hash !== newBlock.previousHash) {
-				console.log('invalid previousHash');
+				//console.log('invalid previousHash');
 				reject();
 			} else if (self.calculateHashForBlock(newBlock) !== newBlock.hash) {
-				console.log(typeof (newBlock.hash) + ' ' + typeof self.calculateHashForBlock(newBlock));
-				console.log('invalid hash: ' + self.calculateHashForBlock(newBlock) + ' ' + newBlock.hash);
+				//console.log(typeof (newBlock.hash) + ' ' + typeof self.calculateHashForBlock(newBlock));
+				//console.log('invalid hash: ' + self.calculateHashForBlock(newBlock) + ' ' + newBlock.hash);
 				reject();
 			} else if (previousBlock.nextHash !== newBlock.hash) {
-				console.log('invalid previousHash.nextHash');
+				//console.log('invalid previousHash.nextHash');
 				reject();
 			} else if(!self._security.verifySignature(newBlock.data, newBlock.signature, newBlock.publicKey)){
-				console.log('invalid signature');
+				//console.log('invalid signature');
 				reject();
 			} else {
 				self.getAllBlocks().then(
 					value => {
 						// Verify if the position of the newBlock is already taken
-						console.log(newBlock);
+						//console.log(newBlock);
 						if (value[self.calculateHashForBlock(newBlock)] !== undefined) {
-							console.log('hash position already in use!');
+							//console.log('hash position already in use!');
 							reject();
 						} else {
 							resolve();
@@ -224,7 +223,7 @@ class Blockchain {
 				last = blocks[i];
 
 			} catch(e){ 
-				console.log("some block is not valid");
+				//console.log("some block is not valid");
 			}
 		}
 
@@ -249,7 +248,7 @@ class Blockchain {
 
 					self._fs.writeFile('./data/data.txt', blocks, function (err) {
 						if (err) {
-							console.log("erro de escrita");
+							console.log("error path data");
 						}
 					});
 					
@@ -321,17 +320,17 @@ class Blockchain {
 
 						self._fs.writeFile('./data/data.txt', value, function (err) {
 							if (err) {
-								console.log("erro de escrita");
+								console.log("error path data");
 							}
 						});
 						
 
-						console.log('block added');
+						//console.log('block added');
 
 						self.latestBlock = last;
 						self._connection.broadcast(self._connection.responseLatestMsg());
 						
-						console.log("deslock pushBlock");
+						//console.log("deslock pushBlock");
 						self.unlock();
 						
 
@@ -348,18 +347,13 @@ class Blockchain {
 
 	async mergeBlockChains(newBlocks){
 		let self = this;
-		console.log("1");
 		let valid = self.isValidChain(newBlocks);
-		console.log(valid);
 		if(newBlocks != "" && valid){
 
 			try{
 				let myBlocks = await self.getAllBlocks();
 				let myLast = this.latestBlock;
-				console.log("------");
-				console.log(newBlocks);
-				console.log(newBlocks[self.getGenesisBlock().hash]);
-				console.log("------================================");
+
 				let newLast = newBlocks[newBlocks[self.getGenesisBlock().hash].previousHash];
 
 				// Achar o ponto comum 
@@ -407,15 +401,8 @@ class Blockchain {
 					newLast = newBlocks[newLast.previousHash];
 				}
 				try{
-					console.log("4");
-					console.log("myLast");
-					console.log(myLast);
-					console.log("newLast");
-					console.log(newLast);
 					let response = await self._connection.questionBlock(myLast, newLast);
-					console.log(response);
-					console.log(myLast.timestamp);
-					console.log(newLast.timestamp);
+					
 					//console.log(newBlocks);
 					if(response == -1){
 						if(myLast.timestamp > newLast.timestamp){
@@ -477,7 +464,7 @@ class Blockchain {
 
 							self._fs.writeFile('./data/data.txt', myBlocks, function (err) {
 								if (err) {
-									console.log("erro de escrita");
+									console.log("error path data");
 								}
 							});
 							
@@ -506,8 +493,6 @@ class Blockchain {
 								self.idx++;
 
 								myLast.index = self.idx;
-								console.log("=====================================");
-
 
 								if (Object.keys(newsBlocksToAdd).length != 0) {
 									newsBlocksToAdd[last.hash].nextHash = myLast.hash;
@@ -530,13 +515,7 @@ class Blockchain {
 							for(let p in newsBlocksToAdd){
 								newBlocks[p] = newsBlocksToAdd[p];
 							}
-							console.log("-1-1-1-1-1-1-1-1-1-1-1--1-1-1-1-1-1-");
-							console.log(firstHash);
-							console.log(newsBlocksToAdd);
-							console.log(newsBlocksToAdd[firstHash].hash);
-
-							console.log(firstHash);
-							console.log(newsBlocksToAdd);
+							
 							newBlocks[newBlocks[newBlocks[self.getGenesisBlock().hash].previousHash].hash].nextHash = newsBlocksToAdd[firstHash].hash;
 							newBlocks[self.getGenesisBlock().hash].previousHash = last.hash;
 							newBlocks[last.hash].nextHash = null;
@@ -547,7 +526,7 @@ class Blockchain {
 
 							self._fs.writeFile('./data/data.txt', newBlocks, function (err) {
 								if (err) {
-									console.log("erro de escrita");
+									console.log("error path data");
 								}
 							});
 							
@@ -558,13 +537,13 @@ class Blockchain {
 						self.unlock();
 					}
 				} catch (e){
-					console.log(e);
-					console.log("error connection");
+					//console.log(e);
+					//console.log("error connection");
 				}
 
 			} catch (e){
-				console.log(e);
-				console.log("error file read");
+				//console.log(e);
+				//console.log("error file read");
 			}
 		} else {
 			this.unlock();

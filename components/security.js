@@ -54,8 +54,9 @@ deptmgmHwRSm5CbgE3huFp2OdXMYe6OH3Jky1TUH7bEBJvDoYNPnXbO3I5bOPjha\n\
 vT6KDq1GrZOCtsO21HxjIkVApx9cQ/7lkNjkMxXUFTn8WpTrnILT\n\
 -----END RSA PRIVATE KEY-----";
 
-	var password = 'fFHstq5O5XwO8hlIjLJBvBmybltaVH7TeaYgDlOqnO39ZDGl121D7IBRbpADdSob';
-	
+	var password = 'fFHstq5OLJybOqnO39ZDGl121BRbpSob';
+	var iv = "BvanZY8a5d613dlg";
+
 	try{
 		var publicKey = fs.readFileSync(path.resolve("./keys/public.key"), 'utf8');	
 		var publicKeyExtracted = extractPublicKey(publicKey);
@@ -115,37 +116,19 @@ vT6KDq1GrZOCtsO21HxjIkVApx9cQ/7lkNjkMxXUFTn8WpTrnILT\n\
 
 	function encryptSymmetric(str) {
 
-		str = new Buffer(str.toString('base64'), "utf8");
-		let cipher = crypto.createCipher("aes-256-ctr", password)
-		str = Buffer.concat([cipher.update(str),cipher.final()]);
-		
-
-		return str.toString('base64');
+		var cipher = crypto.createCipheriv('aes-256-cbc',new Buffer(password), new Buffer(iv))
+  		var crypted = cipher.update(str, 'utf8', 'hex')
+  		crypted += cipher.final('hex');
+		return crypted;
 	}
 
 	
 	function decryptSymmetric(str) {
 
-		str = new Buffer(str, 'base64');
-
-		let decipher = crypto.createDecipher("aes-256-ctr", password)
-		str = Buffer.concat([decipher.update(str) , decipher.final()]);
-
-		return str.toString('utf8');
-
-	}
-
-	function encryptKeys(str, pubKey) {
-
-		str = crypto.publicEncrypt(pubKey, new Buffer(str));
-
-		return str.toString('base64');
-	}
-
-	
-	function decryptKeys(str) {
-		let decrypted = crypto.privateDecrypt(privateKey, new Buffer(str, 'base64'));
-		return decrypted.toString('utf8');
+		var decipher = crypto.createDecipheriv('aes-256-cbc',new Buffer(password), new Buffer(iv))
+		var dec = decipher.update(str, 'hex', 'utf8')
+		dec += decipher.final('utf8')
+		return dec;
 	}
 
 	function hash(str) {
@@ -160,8 +143,6 @@ vT6KDq1GrZOCtsO21HxjIkVApx9cQ/7lkNjkMxXUFTn8WpTrnILT\n\
 		generateSymmetricKey: generateSymmetricKey,
 		encryptSymmetric: encryptSymmetric,
 		decryptSymmetric: decryptSymmetric,
-		encryptKeys: encryptKeys,
-		decryptKeys: decryptKeys,
 		programPub:programPub,
 		publicKeyExtracted:publicKeyExtracted,
 		hash:hash, 
