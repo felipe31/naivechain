@@ -11,7 +11,6 @@ class Service {
 		let self = this;
 		stdin.addListener("data", function(d) {
 
-			self.comparaLog("./logs/test.txt");
 			var opt = d.toString().trim();
 			var x = opt.split(' ');
 
@@ -23,17 +22,18 @@ class Service {
 				case "compare":
 					for(i = 1; x[i] !=  undefined; i++) {
 						caminho = x[i];
-						if(self.validaCaminho(caminho)) {
-							if (self.comparaLog(caminho)) {
-								console.log("The logs were verified with the blockchain");
-							} else {
-								console.log("The logs in blockchain do NOT correspond with the local logs");
+						self.validaCaminho(caminho).then(
+							value => {
+								if (self.comparaLog(caminho)) {
+									console.log("The logs have been verified with the blockchain");
+								} else {
+									console.log("The logs in blockchain do NOT correspond with the local logs");
 
+								}
+							}, error => {
+								console.log("Caminho do log incorreto");
 							}
-						}
-						else {
-							console.log("Caminho do log incorreto");
-						}
+						);
 					}
 				break;
 
