@@ -63,6 +63,7 @@ class Blockchain {
 
 	startChain(){
 		let genesis = this.getGenesisBlock();
+		let genesis.previousHash = genesis.hash;
 		let value = new Object();
 		value[genesis.hash] = genesis;
 
@@ -161,6 +162,7 @@ class Blockchain {
 				self.getAllBlocks().then(
 					value => {
 						// Verify if the position of the newBlock is already taken
+						console.log(newBlock);
 						if (value[self.calculateHashForBlock(newBlock)] !== undefined) {
 							console.log('hash position already in use!');
 							reject();
@@ -420,7 +422,15 @@ class Blockchain {
 					}
 					try{
 						console.log("4");
-						let response = self._connection.questionBlock(myLast, newLast);
+						let response = await self._connection.questionBlock(myLast, newLast);
+						if(response == -1){
+							if(myLast.timestamp > newLast.timestamp){
+								response = 1;
+							} else {
+								response = 0;
+							}
+						}
+						
 						if(response == 0){
 							// minha blockchain está correta
 							let newsBlocksToAdd = [];
@@ -438,7 +448,7 @@ class Blockchain {
 									self.idx++;
 
 									newLast.index = self.idx;
-
+									console.log("------------------------------");
 									await self.isValidNewBlock(newLast, last);
 
 									if (Object.keys(newsBlocksToAdd).length != 0) {
@@ -509,7 +519,7 @@ class Blockchain {
 									self.idx++;
 
 									myLast.index = self.idx;
-
+									console.log("=====================================");
 									await self.isValidNewBlock(myLast, last);
 
 									if (Object.keys(newsBlocksToAdd).length != 0) {
@@ -530,13 +540,13 @@ class Blockchain {
 
 							if(Object.keys(newsBlocksToAdd).length != 0){
 
-									for(let p in newsBlocksToAdd){
-										newBlocks[p] = newsBlocksToAdd[p];
-									}
+								for(let p in newsBlocksToAdd){
+									newBlocks[p] = newsBlocksToAdd[p];
+								}
 
-									newBlocks[newBlocks[newBlocks[self.getGenesisBlock().hash].previousHash].hash].nextHash = newsBlocksToAdd[firstHash].hash;
-									newBlocks[self.getGenesisBlock().hash].previousHash = last.hash;
-									newBlocks[last.hash].nextHash = null;
+								newBlocks[newBlocks[newBlocks[self.getGenesisBlock().hash].previousHash].hash].nextHash = newsBlocksToAdd[firstHash].hash;
+								newBlocks[self.getGenesisBlock().hash].previousHash = last.hash;
+								newBlocks[last.hash].nextHash = null;
 								
 
 								newBlocks = self._security.encryptSymmetric(JSON.stringify(newBlocks));

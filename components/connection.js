@@ -307,8 +307,9 @@ class Connection {
 				count1++;
 			}
 		}
-		
-		if(count0 >= count1){
+		if(count0 == count1){
+			return -1;
+		} else if(count0 > count1){
 			return 0;
 		} else {
 			return 1;
