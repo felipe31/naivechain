@@ -294,7 +294,7 @@ class Connection {
 	async questionBlock(block1, block2){
 		let self = this;
 		
-		let count0 = 0;
+		let count0 = 1;
 		let count1 = 0;
 		for (var i = self.clients.length - 1; i >= 0; i--) {
 			let send = self._security.encryptSymmetric(JSON.stringify([block1, block2]));
@@ -307,6 +307,9 @@ class Connection {
 				count1++;
 			}
 		}
+		console.log("questionBlock");
+		console.log(count0);
+		console.log(count1);
 		if(count0 == count1){
 			return -1;
 		} else if(count0 > count1){

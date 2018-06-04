@@ -423,6 +423,10 @@ class Blockchain {
 					try{
 						console.log("4");
 						let response = await self._connection.questionBlock(myLast, newLast);
+						console.log(response);
+						console.log(myLast.timestamp);
+						console.log(newLast.timestamp);
+						console.log(newBlocks);
 						if(response == -1){
 							if(myLast.timestamp > newLast.timestamp){
 								response = 1;
@@ -463,10 +467,10 @@ class Blockchain {
 									self.idx--;
 								}
 
-								newLast = newBlocks[newLast.nextHash];
+								newLast = newLast.nextHash == null ? null : newBlocks[newLast.nextHash];
 								console.log(newLast);
-								
-							} while(newLast.nextHash != null);
+
+							} while(newLast != null);
 
 							if(Object.keys(newsBlocksToAdd).length != 0){
 
@@ -520,23 +524,23 @@ class Blockchain {
 
 									myLast.index = self.idx;
 									console.log("=====================================");
-									await self.isValidNewBlock(myLast, last);
+									// await self.isValidNewBlock(myLast, last);
 
 									if (Object.keys(newsBlocksToAdd).length != 0) {
 										newsBlocksToAdd[last.hash].nextHash = myLast.hash;
 									}
 									if(firstHash == null ) firstHash = myLast.hash;
 								
-									newsBlocksToAdd[newLast.hash] = newLast;
+									newsBlocksToAdd[myLast.hash] = myLast;
 									last = myLast;
 
 								} catch(e){
 									self.idx--;
 								}
 
-								myLast = myBlocks[myLast.nextHash];
+								myLast = myLast.nextHash == null ? null : myBlocks[myLast.nextHash];
 								
-							} while(myLast.nextHash != null);
+							} while(myLast != null);
 
 							if(Object.keys(newsBlocksToAdd).length != 0){
 
@@ -544,6 +548,8 @@ class Blockchain {
 									newBlocks[p] = newsBlocksToAdd[p];
 								}
 
+								console.log(firstHash);
+								console.log(newsBlocksToAdd);
 								newBlocks[newBlocks[newBlocks[self.getGenesisBlock().hash].previousHash].hash].nextHash = newsBlocksToAdd[firstHash].hash;
 								newBlocks[self.getGenesisBlock().hash].previousHash = last.hash;
 								newBlocks[last.hash].nextHash = null;
