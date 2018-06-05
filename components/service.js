@@ -54,6 +54,10 @@ class Service {
 					} 
 				break;
 
+				case "clear":
+					console.clear();
+				break;
+
 				case "search":
 					switch (x[1]) {
 						case '--timestamp':
@@ -143,10 +147,11 @@ class Service {
 				default:
 					console.log("\n\nUsage:");
 					console.log("\n\tsearch <option>\n\t\tSearch in the blockchain logs according to <option>, it is based\n\t\ton timestamp, creator, ip or public key.");
-					console.log("\n\tconnect <ip>\n\t\tConnect in the blockchain with the given ip(s).");
+					console.log("\n\tclear\tClear the console, just like in bash.");
+					console.log("\n\tconnect <ip>\n\t\tConnect in the blockchain with the given ip.");
 					console.log("\n\tcompare <path> ...\n\t\tCompare the logs in the blockchain with the local logs of the given path(s).")
 					console.log("\n\texit\tExit the program.");
-					console.log("\n\thelp\tShow this information.");
+					console.log("\n\thelp\tShow this information.\n\n");
 				break;
 			}
 
@@ -172,14 +177,14 @@ class Service {
 			let date = new Date();
 
 			if(!self.validaCaminho(file)){
-				console.log("The following path inside config file was not found:\n"+file);
+				console.log("The following path inside config file was not found: "+file);
 				continue;
 			}
 
 
 			let log ="The system ran a log compare on file: "+file+" and the result was:\n";
 
-			console.log("Executing automatic comparation on file:\n"+file);
+			console.log("Executing automatic comparation on file: "+file);
 
 			date.setMinutes(date.getMinutes()-1);
 
@@ -434,6 +439,7 @@ class Service {
 		}
 		return string;
 	}
+
 }
 
 module.exports = Service;
