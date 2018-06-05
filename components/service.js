@@ -8,12 +8,16 @@ class Service {
 		this._blockchain = blockchain;
 		this._fs = fs;
 		let self = this;
-		this.compareServiceLoop = setInterval(function(){self.compareLogFunc()}, 3600000);
+		this.compareServiceLoop = setInterval(function(){self.logCompareFunc()}, 3600000);
 
 		stdin.addListener("data", function(d) {
 
-			var opt = d.toString().trim();
-			var x = opt.split(' ');
+			let path;
+			let log;
+			let ip;
+			let i;
+			let opt = d.toString().trim();
+			let x = opt.split(' ');
 
 			switch (x[0]) {
 				case "exit":
@@ -22,20 +26,20 @@ class Service {
 
 				case "compare":
 					for(i = 1; x[i] !=  undefined; i++) {
-						let path = x[i];
-						if(self.validaCaminho(path)){
-							self.comparaLog(path).then(
+						path = x[i];
+						if(self.isValidPath(path)){
+							self.logCompare(path).then(
 								value => {
 									console.log("The logs have been verified with the blockchain");
 
-									let log ="The client ran a log compare: "+opt+" and the result was:\nLogs successfully compared!";
+									log ="The client ran a log compare: "+opt+" and the result was:\nLogs successfully compared!";
 									self._blockchain.addBlock(log,'', 1);	
 
 								}, error => {
 
 									console.log("The logs in blockchain do NOT correspond with the local logs");
 
-									let log = self.generateCompareErrorLog(error, path, 0, opt);
+									log = self.generateCompareErrorLog(error, path, 0, opt);
 									self._blockchain.addBlock(log,'', 1);	
 
 								});
@@ -46,8 +50,8 @@ class Service {
 				break;
 
 				case "connect":
-					var ip = x[1];
-					if (self.validaIp(ip)) {
+					ip = x[1];
+					if (self.isValidIp(ip)) {
 						console.log("Starting connection"); 
 						self._blockchain._connection.connectAddress({'address':ip});
 					} else {
@@ -63,24 +67,24 @@ class Service {
 					switch (x[1]) {
 						case '--timestamp':
 						case '-t':
-							var data = x[2]; 
-							var composedDateStart = self.validaData(data);
-								// Onde validaData() retorna True se "data" estiver no formato correto; 		
+							let data = x[2]; 
+							let composedDateStart = self.isValidData(data);
+								// Onde isValidData() retorna True se "data" estiver no formato correto; 		
 							if (composedDateStart) {
-								var composedDateEnd;
+								let composedDateEnd;
 								if(x[3] == undefined){
 									composedDateEnd = new Date(composedDateStart.getTime());
 									composedDateEnd.setHours(23);
 									composedDateEnd.setMinutes(59);
 									composedDateEnd.setSeconds(59);				
 								} else{
-									composedDateEnd = self.validaData(x[3]);
+									composedDateEnd = self.isValidData(x[3]);
 									if(!composedDateEnd) break;
 								}
-								let log ="The client ran a log reading: "+opt;
+								log ="The client ran a log reading: "+opt;
 								self._blockchain.addBlock(log,'', 1);
-								// Onde pesquisaLogData() retorna Log com a data correspondente;
-								self.pesquisaLogData(composedDateStart.getTime(), composedDateEnd.getTime());
+								// Onde searchLogData() retorna Log com a data correspondente;
+								self.searchLogData(composedDateStart.getTime(), composedDateEnd.getTime());
 							} else {
 								console.log("The parameter is invalid");
 							}
@@ -88,32 +92,32 @@ class Service {
 
 						case '--public-key-path':
 						case '-p': 
-							var caminho = x[2];
-							// Onde validaCaminho() retorna True se o "caminho" da PK estiver correto; 	
-							if (self.validaCaminho(caminho)) {
-								let log ="The client ran a log reading: "+opt;
+							let path = x[2];
+							// Onde isValidPath() retorna True se o "path" da PK estiver correto; 	
+							if (self.isValidPath(path)) {
+								log ="The client ran a log reading: "+opt;
 								self._blockchain.addBlock(log,'', 1);
-								// Onde pesquisaLogPK() retorna Log com a PK correpondente;
-								self.pesquisaLogPK(caminho);
+								// Onde searchLogPK() retorna Log com a PK correpondente;
+								self.searchLogPK(path);
 							} else {
 								console.log("The path is invalid");
-								//console.log("Caminho da Chave Pública incorreto");
+								//console.log("path da Chave Pública incorreto");
 							}
 						break;
 
 						case '--creator':
 						case '-c':
-							var criador = x[2];
+							let creator = x[2];
 
-							var i;
-							for(i = 3; x[i] !=  undefined; i++) criador = criador.concat(" ", x[i]);
+							let i;
+							for(i = 3; x[i] !=  undefined; i++) creator = creator.concat(" ", x[i]);
 
-								// Onde validaCriador() retorna True se o "criador" estiver correto;
-							if (self.validaCriador(criador)) {
-								// Onde pesquisaLogPK() retorna Log do "criador" correspondente;
-								let log ="The client ran a log reading: "+opt;
+								// Onde isValidCreator() retorna True se o "creator" estiver correto;
+							if (self.isValidCreator(creator)) {
+								// Onde searchLogPK() retorna Log do "creator" correspondente;
+								log ="The client ran a log reading: "+opt;
 								self._blockchain.addBlock(log,'', 1);
-								self.pesquisaLogCriador(criador);
+								self.searchLogCreator(creator);
 							} else {
 								console.log("The creator is invalid");
 							} 
@@ -121,13 +125,13 @@ class Service {
 
 						case '--ip':
 						case '-i': 
-							var ip = x[2]; 
-							// Onde validaIp() retorna True se o "ip" estiver correto;
-							if (self.validaIp(ip)) {
-								// Onde pesquisaLogIp() retorna Log do "Ip" correspondente;
-								let log ="The client ran a log reading: "+opt;
+							ip = x[2]; 
+							// Onde isValidIp() retorna True se o "ip" estiver correto;
+							if (self.isValidIp(ip)) {
+								// Onde searchLogIp() retorna Log do "Ip" correspondente;
+								log ="The client ran a log reading: "+opt;
 								self._blockchain.addBlock(log,'', 1);
-								self.pesquisaLogIp(ip);
+								self.searchLogIp(ip);
 							} else {
 								console.log("The ip is invalid");
 							} 
@@ -161,7 +165,7 @@ class Service {
 	}
 
 
-	compareLogFunc(){
+	logCompareFunc(){
 		var logFiles;
 		
 		try {
@@ -178,7 +182,7 @@ class Service {
 			let file = logFiles[i];
 			let date = new Date();
 
-			if(!self.validaCaminho(file)){
+			if(!self.isValidPath(file)){
 				console.log("The following path inside config file was not found: "+file);
 				continue;
 			}
@@ -190,7 +194,7 @@ class Service {
 
 			date.setHours(date.getHours()-1);
 
-			this.comparaLog(file, date.getTime()).then(
+			this.logCompare(file, date.getTime()).then(
 				value => {
 					log = log+"Logs successfully compared!";
 					self._blockchain.addBlock(log,'', 1);	
@@ -202,14 +206,14 @@ class Service {
 	}
 
 
-	comparaLog(path, timestamp){
+	logCompare(path, timestamp){
 		let self = this;
 
 		return new Promise(function(resolve, reject){
 
 			// while(self._blockchain.lock == 1);
 
-			self.pesquisaLogFile(path, timestamp, function(result){
+			self.searchLogFile(path, timestamp, function(result){
 				if (result == null){ 
 					//console.log("result == null");
 					resolve();
@@ -218,12 +222,12 @@ class Service {
 
 					self._fs.readFile(path, 'utf8', function(err, data){
 						if (err) {	
-							reject(1);
+							reject([1]);
 						} else {
 							//console.log(data);
 							//console.log(logBlockchain);
 							if(data.length - logBlockchain.length <  0){
-								reject(2);
+								reject([2]);
 							} else{
 								let j, i;
 								for (i = logBlockchain.length - 1, j = data.length - 1; i >= 0; i--, j--) {
@@ -244,7 +248,7 @@ class Service {
 		});
 	}
 
-	validaData(date){
+	isValidData(date){
 		var matches = /^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/.exec(date);
 		if (matches == null) return false;
 		var d = matches[1];
@@ -258,15 +262,15 @@ class Service {
 		return null;
 	}
 
-	validaCaminho(path){
+	isValidPath(path){
 		return this._fs.existsSync(path);
 	}
 
-	validaCriador(criator){
+	isValidCreator(criator){
 		return typeof(criator) == "string";
 	}
 
-	validaIp(ip){
+	isValidIp(ip){
 		return /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ip);
 	}
 
@@ -287,10 +291,10 @@ class Service {
 		}
 	}
 
-	pesquisaLogData(timestampStart, timestampEnd){
+	searchLogData(timestampStart, timestampEnd){
 		console.log("Follows the result of your search by timestamp");
 		let self = this;
-		this._this._blockchain.getAllBlocks().then(function (blocks){
+		this._blockchain.getAllBlocks().then(function (blocks){
 			let result = [];
 			let currentHash = self._blockchain.getGenesisBlock().hash;
 
@@ -310,11 +314,11 @@ class Service {
 
 	}
 
-	pesquisaLogPK(pathPK){
+	searchLogPK(pathPK){
 		let self = this;
 		console.log("Follows the result of your search by PK");
 		try{
-			fs.readFile(pathPK, 'utf8', function(err, publicKey){
+			this._fs.readFile(pathPK, 'utf8', function(err, publicKey){
 				if (err) {
 					console.log("File not found!");
 				} else {
@@ -351,7 +355,7 @@ class Service {
 
 	}
 
-	pesquisaLogCriador(creator, callback){
+	searchLogCreator(creator, callback){
 		if(callback == undefined)
 			console.log("Follows the result of your search by creator");
 		let self = this;
@@ -378,7 +382,7 @@ class Service {
 		});
 	}
 
-	pesquisaLogIp(ip, callback){
+	searchLogIp(ip, callback){
 		if(callback == undefined)
 			console.log("Follows the result of your search by IP");
 		let self = this;
@@ -405,7 +409,7 @@ class Service {
 		});
 	}
 
-	pesquisaLogFile(path, timestamp, callback){
+	searchLogFile(path, timestamp, callback){
 		if(callback == undefined)
 			console.log("Follows the result of your search by file");
 		if(timestamp == undefined)
@@ -425,7 +429,8 @@ class Service {
 			}
 
 			if(result.length < 1){	
-				callback(null);
+				if(callback != undefined)
+					callback(null);
 
 			}else if(callback != undefined){
 				callback(result);
