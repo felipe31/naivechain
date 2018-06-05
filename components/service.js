@@ -8,7 +8,7 @@ class Service {
 		this._blockchain = blockchain;
 		this._fs = fs;
 		let self = this;
-		this.compareServiceLoop = setInterval(function(){self.compareLogFunc()}, 30000);
+		this.compareServiceLoop = setInterval(function(){self.compareLogFunc()}, 1000000);
 
 		stdin.addListener("data", function(d) {
 

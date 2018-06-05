@@ -41,6 +41,7 @@ class Blockchain {
 						},
 						error => {
 							console.log("error path data");
+							process.exit(1);
 						}
 					);
 				}
@@ -87,17 +88,24 @@ class Blockchain {
 	deleteOldFiles(){
 		let self = this;
 		return new Promise(function(resolve, reject) {
-
-			self._fs.readdir("./data", (err, files) => {
-				if (err) reject();
-
-				for (const file of files) {
-					self._fs.unlink(self._path.join("data", file), err => {
-						if (err) reject();
-					});
-				}
-				resolve(true);
-			});
+			try {
+				self._fs.readdir("./data", (err, files) => {
+					if (err) reject();
+					try {
+						for (const file of files) {
+							self._fs.unlink(self._path.join("data", file), err => {
+								if (err) reject();
+							});
+						}
+					} catch (e){
+						reject();
+					}	
+					resolve(true);
+				});	
+			} catch (e){
+				reject();
+			}
+			
 		});
 	}
 
