@@ -25,7 +25,7 @@ class logManager {
 				tl.on("line", function(data){
 					
 					if(data != ""){
-						console.log('Log Created! Block being created...'+data);
+						//console.log('Log Created! Block being created...'+data);
 						self._blockchain.addBlock(data,file, 0);
 					}
 				})

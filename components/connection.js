@@ -72,7 +72,7 @@ class Connection {
 		self._io.on('connection', function(socket){
 
 			let peer = self.sockets.find(x => x.socket === socket.id);
-			console.log("peer connected: "+ peer.address);
+			//console.log("peer connected: "+ peer.address);
 			let data = {'type': MessageType.ADD_PEER, 'address': peer.address, 'publicKey': peer.publicKey};
 			self.connectAddress(data);
 			self.broadcast(JSON.stringify(data));
@@ -83,7 +83,7 @@ class Connection {
 				if (index !== -1) {
 					self.sockets.splice(index, 1);
 				}
-				console.log('peer disconnected');
+				////console.log('peer disconnected');
 			});
 
 			socket.on('message', (result) => {
@@ -102,7 +102,7 @@ class Connection {
 					}
 
 				} catch (err){
-					console.log("package damaged server");
+					//console.log("package damaged server");
 				}
 			});
 
@@ -122,8 +122,8 @@ class Connection {
 					)
 
 				} catch (err){
-					console.log(err);
-					console.log("package damaged server");
+					//console.log(err);
+					//console.log("package damaged server");
 				}
 			    
 			 });
@@ -131,7 +131,8 @@ class Connection {
 		});
 
 		this._http.listen(p2p_port, function(){
-			console.log('listening on *:' + p2p_port);
+			console.log('Blockchain has been started');
+			console.log('---------------------------');
 		});
 	}
 
@@ -140,7 +141,7 @@ class Connection {
 			'type': MessageType.RESPONSE_BLOCKCHAIN,
 			'data': JSON.stringify([this._blockchain.latestBlock])
 		}
-		console.log(this._blockchain.latestBlock);
+		//console.log(this._blockchain.latestBlock);
 		return JSON.stringify(data);
 	}
 
@@ -205,8 +206,8 @@ class Connection {
 									client.emit('message', self._security.encryptSymmetric(self.responseChainMsg(value)) );
 								},
 								error => {
-									console.log(error); // Error!
-									console.log("erro de leitura");
+									//console.log(error); // Error!
+									//console.log("erro de leitura");
 								}
 							);
 						break;
@@ -214,7 +215,7 @@ class Connection {
 					}
 
 				} catch (err){
-					console.log("package damaged client");
+					//console.log("package damaged client");
 				}
 			});
 
@@ -234,13 +235,13 @@ class Connection {
 				if (index !== -1) {
 					self.clients.splice(index, 1);
 				}
-				console.log("one peer disconnected");
+				//console.log("one peer disconnected");
 			});
 
 
 			this.clients.push({client: client, address: address.address});
 		} else {
-			console.log("this peer is already connected");
+			//console.log("this peer is already connected");
 		}
 	}
 
@@ -258,7 +259,7 @@ class Connection {
 			let message = self.messageToAdd[0];
 			self.messageToAdd.splice(0, 1);
 			//console.log(message);
-			console.log("lock");
+			//console.log("lock");
 			let receivedBlocks = JSON.parse(message.data);
 
 			if(Object.keys(receivedBlocks).length == 1){
@@ -296,7 +297,7 @@ class Connection {
 		
 		let count0 = 1;
 		let count1 = 0;
-		console.log(self.clients);
+		//console.log(self.clients);
 
 		for (var i = self.clients.length - 1; i >= 0; i--) {
 			let send = self._security.encryptSymmetric(JSON.stringify([block1, block2]));
@@ -304,8 +305,8 @@ class Connection {
 			try{
 				res = await self.receiveQuestion(self.clients[i].client, send);	
 			} catch(e){
-				console.log(e);
-				console.log("error question");
+				//console.log(e);
+				//console.log("error question");
 			}
 
 			if(res == 0){
@@ -315,9 +316,9 @@ class Connection {
 			}
 		}
 
-		console.log("questionBlock");
-		console.log(count0);
-		console.log(count1);
+		//console.log("questionBlock");
+		//console.log(count0);
+		//console.log(count1);
 		if(count0 == count1){
 			return -1;
 		} else if(count0 > count1){
