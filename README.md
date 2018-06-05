@@ -22,7 +22,7 @@ or like this, in case of the executable:
 ````
 ./main-win
 ````
-You may not run like this:
+You may **not** run like this:
 ````
 ./somewhere/main-win
 ````
@@ -55,7 +55,7 @@ npm start
 	help	Show this information.
 
 
-## Search commnad use
+## Search command
 
 ### Usage: search <option>
 
