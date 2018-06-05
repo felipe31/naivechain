@@ -1,6 +1,9 @@
 	'use strict';
 
 class Block {
+	/*
+	* constructor instantiates a Block object
+	*/
 	constructor(index, timestamp, data, hash, creator, publicKey, signature, ip, file) {
 		this.index = index;
 		this.previousHash = null;
@@ -18,6 +21,11 @@ class Block {
 
 class Blockchain {
 
+
+	/*
+	* constructor instantiates a Blockchain object with the blocks returned by getAllBlocks
+	* or start a new blockchain, in case the getAllBlocks cannot return the old blocks
+	*/
 	constructor(path, fs, ip, security) {
 		this.latestBlock;
 		this._path = path;
@@ -48,6 +56,9 @@ class Blockchain {
 		);
 	}
 
+	/*
+	* getLastBlock find and return the last block of the blockchain
+	*/
 	getLastBlock(blocks){
 		if(blocks[this.getGenesisBlock().hash].previousHash == null){
 			return blocks[this.getGenesisBlock().hash];
@@ -56,10 +67,17 @@ class Blockchain {
 		}
 	}
 
+	/*
+	* setConnection initializates the variable connection according to the parameter
+	*/
 	setConnection(connection){
 		this._connection = connection;
 	}
 
+
+	/*
+	* startChain starts a new blockchain with the standard genesis block
+	*/
 	startChain(){
 		let genesis = this.getGenesisBlock();
 		genesis.previousHash = genesis.hash;
@@ -79,11 +97,17 @@ class Blockchain {
 		this.latestBlock = genesis;
 	}
 
+	/*
+	* blockToQueue pushes a block into the queue of blocks to be added on the blockchain
+	*/
 	blockToQueue(block){
 		this.blocksToAdd.push(block);
 		this.pushBlock();
 	}
 	
+	/*
+	* deleteOldFiles deletes the file data in the case it is inconsistent or wrong
+	*/
 	deleteOldFiles(){
 		let self = this;
 		return new Promise(function(resolve, reject) {
@@ -101,15 +125,26 @@ class Blockchain {
 		});
 	}
 
+	/*
+	* getGenesisBlock generates the standard genesis block
+	*/
 	getGenesisBlock(){
 		let signature = this._security.signature("genesis", 1);
 		return new Block(0,1465154705000, "genesis", this.calculateHash(0, 1465154705000, "genesis", "Blockchain Services", this._security.programPub, signature, "0.0.0.0", ""), "Blockchain Services", this._security.programPub, signature, "0.0.0.0", "");
 	}
 
+	/*
+	* addBlock inserts the block information in the queue of blocks to be added in the 
+	* blockchain
+	*/
 	addBlock(blockData, file, type, connection){
 		this.blockToQueue({data: blockData, file: file, type: type});
 	}
 
+	/*
+	* generateNextBlock generate a new block according to the parameters and with local ip
+	* and public key from the user or from the Blockchain Services
+	*/
 	generateNextBlock(blockData, file, type){
 		this.idx++;
 
@@ -127,15 +162,27 @@ class Blockchain {
 		}
 	};
 
+	/*
+	* calculateHash calculate the hash for all the information in the parameters
+	*/
 	calculateHash(timestamp, data, creator, publicKey, signature, ip, file){
 		return this._security.hash(timestamp + data + creator + publicKey + signature + ip + file);
 
 	};
 
+
+	/*
+	* calculateHashForBlock calls calculateHash using the information of the parameter block
+	*/
 	calculateHashForBlock(block){
 		return this.calculateHash(block.timestamp, block.data, block.creator, block.publicKey, block.signature, block.ip, block.file);
 	};
 
+
+	/*
+	* isValidNewBlock checks if the newBlock is properly structured, if it was already 
+	* inserted in the blockchain and if it is properly linked with previousBlock
+	*/
 	isValidNewBlock (newBlock, previousBlock){
 		let self = this;
 
@@ -173,6 +220,10 @@ class Blockchain {
 		});
 	};
 
+
+	/*
+	* getAllBlocks retrieve all the blocks from the file data.txt
+	*/
 	getAllBlocks(){
 		let self = this;
 		return new Promise(function(resolve, reject) {
@@ -196,6 +247,10 @@ class Blockchain {
 		});
 	}
 
+
+	/*
+	* appendBlock append a chain of blocks in the end of the blockchain.
+	*/
 	async appendBlock(blocks){
 		let self = this;
 
@@ -264,6 +319,11 @@ class Blockchain {
 		}
 	}
 
+	
+	/*
+	* pushBlock take the blocks from the queue and insert them in the blockchain.
+	* This function block other calls to it. It runs once at a time.
+	*/
 	async pushBlock(){	
 	
 		if(this.lock == 0 && this.blocksToAdd.length != 0){
@@ -345,6 +405,13 @@ class Blockchain {
 		}
 	}
 
+	/*
+	* mergeBlockChains handle conflicts of new blocks with the current blockchain.
+	* What this function do: 
+	*	It checks if the new blocks need to be updated
+	*	It checks if the current blockchain needs to be updated
+	*	It asks the other nodes in the network what is the proper position of the new blocks.
+	*/
 	async mergeBlockChains(newBlocks){
 		let self = this;
 		let valid = self.isValidChain(newBlocks);
@@ -550,6 +617,11 @@ class Blockchain {
 		}
 	};
 
+
+	/*
+	* unlock is related to the function pushBlock, it unlocks the pushBlock to be
+	* executable again.
+	*/
 	unlock(){
 		this.lock = 0;
 
@@ -560,6 +632,11 @@ class Blockchain {
 		}
 	}
 
+
+	/*
+	* isValidChain uses the function isValidNewBlock to check each linked pair in the 
+	* blockchain.
+	*/
 	async isValidChain(blockchainToValidate){
 		let self = this;
 		var hashCurrentBlock = self.getGenesisBlock().hash;
