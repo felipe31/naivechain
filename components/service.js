@@ -8,7 +8,7 @@ class Service {
 		this._blockchain = blockchain;
 		this._fs = fs;
 		let self = this;
-		this.compareServiceLoop = setInterval(function(){self.compareLogFunc()}, 30000);
+		this.compareServiceLoop = setInterval(function(){self.compareLogFunc()}, 3600000);
 
 		stdin.addListener("data", function(d) {
 
@@ -22,22 +22,23 @@ class Service {
 
 				case "compare":
 					for(i = 1; x[i] !=  undefined; i++) {
-						caminho = x[i];
-						if(self.validaCaminho(caminho)){
-							let result  = "";
-							self.comparaLog(caminho).then(
+						let path = x[i];
+						if(self.validaCaminho(path)){
+							self.comparaLog(path).then(
 								value => {
 									console.log("The logs have been verified with the blockchain");
-									result = "Logs successfully compared!";
-									let log ="The client ran a log compare: "+opt+" and the result was:\n"+result;
+
+									let log ="The client ran a log compare: "+opt+" and the result was:\nLogs successfully compared!";
 									self._blockchain.addBlock(log,'', 1);	
+
 								}, error => {
-									console.log("The logs in blockchain do NOT correspond with the local logs")
-									result = "Logs FAIL on compare!";
-									let log ="The client ran a log compare: "+opt+" and the result was:\n"+result;
+
+									console.log("The logs in blockchain do NOT correspond with the local logs");
+
+									let log = self.generateCompareErrorLog(error, path, 0, opt);
 									self._blockchain.addBlock(log,'', 1);	
+
 								});
-							
 						} else {
 							console.log("The path is invalid");
 						}
@@ -183,18 +184,18 @@ class Service {
 			}
 
 
-			let log ="The system ran a log compare on file: "+file+" and the result was:\n";
+			let log;
 
 			console.log("Executing automatic comparation on file: "+file);
 
-			date.setMinutes(date.getMinutes()-1);
+			date.setHours(date.getHours()-1);
 
 			this.comparaLog(file, date.getTime()).then(
 				value => {
 					log = log+"Logs successfully compared!";
 					self._blockchain.addBlock(log,'', 1);	
 				}, error => {
-					log = log+"Logs FAIL on compare!";
+					log = self.generateCompareErrorLog(error, path, 1);
 					self._blockchain.addBlock(log,'', 1);	
 				});
 		}
@@ -206,7 +207,7 @@ class Service {
 
 		return new Promise(function(resolve, reject){
 
-			while(self._blockchain.lock == 1);
+			// while(self._blockchain.lock == 1);
 
 			self.pesquisaLogFile(path, timestamp, function(result){
 				if (result == null){ 
@@ -217,24 +218,25 @@ class Service {
 
 					self._fs.readFile(path, 'utf8', function(err, data){
 						if (err) {	
-							reject();
+							reject(1);
 						} else {
 							//console.log(data);
 							//console.log(logBlockchain);
-							if(data.length - logBlockchain.length <  0)
-								reject();
-							let j, i;
-							for (i = logBlockchain.length - 1, j = data.length - 1; i >= 0; i--, j--) {
-								if(logBlockchain[i] !== data[j])
-									reject();
+							if(data.length - logBlockchain.length <  0){
+								reject(2);
+							} else{
+								let j, i;
+								for (i = logBlockchain.length - 1, j = data.length - 1; i >= 0; i--, j--) {
+									if(logBlockchain[i] !== data[j])
+										reject([data.substr(j, data.length), logBlockchain.substr(j, logBlockchain.length)]);
+								}
+								//console.log("resolve");
+								resolve();
+								// } else{
+								// 	console.log("reject");
+								// 	reject();
+								// }
 							}
-							//console.log("resolve");
-							resolve();
-							// } else{
-							// 	console.log("reject");
-							// 	reject();
-							// }
-
 						}
 					});
 				}
@@ -276,11 +278,11 @@ class Service {
 			date = new Date(results[i]["timestamp"]).toLocaleString('pt-BR');
 			console.log("-----------------");
 			console.log("Result #: "+i);
-			console.log("Creator: "+results[i]["creator"]);
-			console.log("Creation date: "+date);
-			console.log("Data: "+results[i]["data"]);
-			console.log("IP: "+results[i]["ip"]);
-			console.log("Public Key: "+results[i]["publicKey"]);
+			console.log("\nCreator: "+results[i]["creator"]);
+			console.log("\nCreation date: "+date);
+			console.log("\nData: "+results[i]["data"]);
+			console.log("\nIP: "+results[i]["ip"]);
+			console.log("\nPublic Key: "+results[i]["publicKey"]);
 			console.log("-----------------\n");
 		}
 	}
@@ -416,7 +418,7 @@ class Service {
 			let currentHash = self._blockchain.getGenesisBlock().hash;
 
 			while(currentHash != null){
-				if(blocks[currentHash].file === path && blocks[currentHash].timestamp > timestamp){
+				if(blocks[currentHash].file === path && blocks[currentHash].timestamp > timestamp && self._blockchain._security.publicKey == blocks[currentHash].publicKey){
 					result.push(blocks[currentHash]);
 				}
 				currentHash = blocks[currentHash].nextHash;	
@@ -439,6 +441,27 @@ class Service {
 			string = string.concat(arrayJson[i][field]);
 		}
 		return string;
+	}
+
+	generateCompareErrorLog(error, path, flag, opt){
+		let log = "";
+		if (flag == 1) {
+			log = "The system ran a log compare on file: "+path+" and the result was:\n"
+		} else log = "The client ran a log compare: "+opt+" and the result was:\n";
+
+		log = log+"Logs FAIL on compare!";
+		switch(error[0]){
+			case 1:
+				log = log+"\nIt was not possible to open the file: "+path;
+				break;
+			case 2:
+				log = log+"\nThe file: "+path+" do NOT contain as much data as the blockchain.";
+				break;
+			default:
+				log = log+"\nThe file is different on: "+error[0]+"\nAccording to the blockchain, it should be: "+error[1];
+		}
+		return log;
+
 	}
 
 }
