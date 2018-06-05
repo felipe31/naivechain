@@ -85,5 +85,9 @@ npm start
 
 ## Compiled files
 
-This package was compiled using [pkg](https://github.com/zeit/pkg "Pkg"). The binary files to linux, mac and windows are located in the [binaries](./binaries) directory. To run a binary you have to fulfill all the requirements listed above and you need to keep the file _x509.node_ in the same directory of the binary (already included in the _binaries_ folder).
+This project was compiled using [pkg](https://github.com/zeit/pkg "Pkg"). The binary files to linux, mac and windows are located in the [binaries](./binaries) directory. To run a binary you have to fulfill all the requirements listed above and you need to keep the file _x509.node_ in the same directory of the binary (already included in the _binaries_ folder).
+
+## Considerations
+
+The Log Blockchain was firstly forked from the [naivechain](https://github.com/lhartikk/naivechain) project in the branch master.
 
