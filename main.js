@@ -32,25 +32,25 @@ var lm = new logManager(fs, tail, bc);
 
 //---------------------------------------------------
 
-var initHttpServer = () => {
-	var app = express();
-	app.use(bodyParser.json());
+// var initHttpServer = () => {
+// 	var app = express();
+// 	app.use(bodyParser.json());
 
-	app.get('/blocks', (req, res) => {
+// 	app.get('/blocks', (req, res) => {
 
-		bc.getAllBlocks().then(function (data){
-			res.send(data);
-		}).catch(function (err) {
-			res.send(err);
-		});
+// 		bc.getAllBlocks().then(function (data){
+// 			res.send(data);
+// 		}).catch(function (err) {
+// 			res.send(err);
+// 		});
 		
-	});
+// 	});
 
-	app.get('/peers', (req, res) => {
-		res.send(cn.sockets.map(s => s.address ));
-	});
+// 	app.get('/peers', (req, res) => {
+// 		res.send(cn.sockets.map(s => s.address ));
+// 	});
 
-	app.listen(3001, () => console.log('Listening http on port: ' + 3001));
-};
+// 	app.listen(3001, () => console.log('Listening http on port: ' + 3001));
+// };
 
-initHttpServer();
+// initHttpServer();

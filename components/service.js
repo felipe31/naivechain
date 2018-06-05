@@ -206,7 +206,7 @@ class Service {
 
 		return new Promise(function(resolve, reject){
 
-			while(self._blockchain.lock == 1);
+			//while(self._blockchain.lock == 1);
 
 			self.pesquisaLogFile(path, timestamp, function(result){
 				if (result == null){ 

@@ -297,7 +297,7 @@ class Connection {
 		
 		let count0 = 1;
 		let count1 = 0;
-		//console.log(self.clients);
+		//console.log("self.clients");
 
 		for (var i = self.clients.length - 1; i >= 0; i--) {
 			let send = self._security.encryptSymmetric(JSON.stringify([block1, block2]));
