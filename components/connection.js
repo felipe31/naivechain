@@ -173,6 +173,9 @@ class Connection {
 		return JSON.stringify(data);
 	}
 
+	/*
+	* connectAddress add a new peer to the network
+	*/
 	connectAddress(address){
 
 		if((!this.clients.find(x => x.address === address.address)) && (address.address != this._ip.address())) {
@@ -250,6 +253,10 @@ class Connection {
 		this.handleBlockchainResponse();
 	}
 
+	/*
+	* handleBlockchainResponse handle packages with blocks, it can append the new blocks
+	* or call mergeBlockChains to handle the conflicts.
+	*/
 	handleBlockchainResponse(){
 
 		if(this._blockchain.lock == 0 && this.messageToAdd.length != 0){
@@ -292,6 +299,10 @@ class Connection {
 		}
 	}
 
+	/*
+	* questionBlock starts a voting in the network. It sends two blocks to the network 
+	* and receive the answer of which block the other node have.
+	*/
 	async questionBlock(block1, block2){
 		let self = this;
 		
@@ -328,6 +339,9 @@ class Connection {
 		}
 	}
 
+	/*
+	* receiveQuestion handle the incoming question from other blocks.
+	*/
 	receiveQuestion(clientToSend, send){
 
 		return new Promise(function(resolve, reject) {
